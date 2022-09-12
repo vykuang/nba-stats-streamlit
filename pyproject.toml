@@ -6,7 +6,11 @@ authors = ["vykuang <vykuang92@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">3.9.7,<4.0"
+scikit-learn = "~1.1.0"
+mlflow = "~1.28.0"
+Flask = "^2.2.2"
+streamlit = "^1.12.2"
 
 
 [tool.poetry.group.dev.dependencies]
