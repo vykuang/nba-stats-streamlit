@@ -46,7 +46,7 @@ When we test, we don't want to actually make the API call, so we *monkeypatch* t
 ```py
 # test_app.py
 # for us to monkeypatch
-import requests 
+import requests
 
 # the code we're testing
 import app
@@ -57,7 +57,7 @@ class MockResponse:
     # our mock json() always returns a hard-coded dict
     @staticmethod
     def json():
-        return {'mock_key": "mock_response"}
+        return {"mock_key": "mock_response"}
 
 def test_get_json(monkeypatch):
     # regardless of whatever arg is passed to get_json(),
@@ -67,9 +67,9 @@ def test_get_json(monkeypatch):
         return MockResponse()
 
     # monkeypatching the requests method and changing
-    # to our mock_get 
+    # to our mock_get
     monkeypatch.setattr(requests, "get", mock_get)
-    
+
     # now when we call get_json, which in turn calls
     # requests.get(), it will instead call mock_get
     # and turns instance of our MockResponse object, which we defined
@@ -112,6 +112,6 @@ class MockCareerResponse:
 def test_get_season(monkeypatch):
     def mock_get_career(*args, **kwargs):
         return MockCareerResponse()
-    
+
     # this is where we need to patch the API call
     monkeypatch.set
