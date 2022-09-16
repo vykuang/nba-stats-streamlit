@@ -33,6 +33,14 @@ toolz = "*"
 dev = ["black", "docutils", "flake8", "ipython", "m2r", "mistune (<2.0.0)", "pytest", "recommonmark", "sphinx", "vega-datasets"]
 
 [[package]]
+name = "application-properties"
+version = "0.5.2"
+description = "A simple, easy to use, unified manner of accessing program properties."
+category = "dev"
+optional = false
+python-versions = ">=3.8.0"
+
+[[package]]
 name = "appnope"
 version = "0.1.3"
 description = "Disable App Nap on macOS >= 10.9"
@@ -194,6 +202,18 @@ description = "Cross-platform colored terminal text."
 category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
+
+[[package]]
+name = "columnar"
+version = "1.4.1"
+description = "A tool for printing data in a columnar format."
+category = "dev"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+toolz = "*"
+wcwidth = "*"
 
 [[package]]
 name = "commonmark"
@@ -1020,6 +1040,19 @@ spelling = ["pyenchant (>=3.2,<4.0)"]
 testutils = ["gitpython (>3)"]
 
 [[package]]
+name = "pymarkdownlnt"
+version = "0.9.7"
+description = "A GitHub Flavored Markdown compliant Markdown linter."
+category = "dev"
+optional = false
+python-versions = ">=3.8.0"
+
+[package.dependencies]
+application-properties = "0.5.2"
+Columnar = "1.4.1"
+typing-extensions = "4.3.0"
+
+[[package]]
 name = "Pympler"
 version = "1.0.1"
 description = "A development tool to measure, monitor and analyze the memory behavior of Python objects."
@@ -1553,7 +1586,7 @@ testing = ["func-timeout", "jaraco.itertools", "pytest (>=6)", "pytest-black (>=
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9.8"
-content-hash = "c5aad93981a6ca48362cb79f86f60bcf0292f4633ed42df928e590b45fdca86c"
+content-hash = "12a9230bca880eba3a6b55b314d4be94d2dfd66b28075fa199b00223407e8631"
 
 [metadata.files]
 alembic = [
@@ -1563,6 +1596,10 @@ alembic = [
 altair = [
     {file = "altair-4.2.0-py3-none-any.whl", hash = "sha256:0c724848ae53410c13fa28be2b3b9a9dcb7b5caa1a70f7f217bd663bb419935a"},
     {file = "altair-4.2.0.tar.gz", hash = "sha256:d87d9372e63b48cd96b2a6415f0cf9457f50162ab79dc7a31cd7e024dd840026"},
+]
+application-properties = [
+    {file = "application_properties-0.5.2-py3-none-any.whl", hash = "sha256:2172fe240b377ac8948c6a6492c3063722dc5dbbd00456092491688a5d95672e"},
+    {file = "application_properties-0.5.2.tar.gz", hash = "sha256:c1fc3c8775a0337d2d8c5268fd4a9b4fed22bc4396e7ce17ad0a5c5463355217"},
 ]
 appnope = [
     {file = "appnope-0.1.3-py2.py3-none-any.whl", hash = "sha256:265a455292d0bd8a72453494fa24df5a11eb18373a60c7c0430889f22548605e"},
@@ -1706,6 +1743,10 @@ cloudpickle = [
 colorama = [
     {file = "colorama-0.4.5-py2.py3-none-any.whl", hash = "sha256:854bf444933e37f5824ae7bfc1e98d5bce2ebe4160d46b5edf346a89358e99da"},
     {file = "colorama-0.4.5.tar.gz", hash = "sha256:e6c6b4334fc50988a639d9b98aa429a0b57da6e17b9a44f0451f930b6967b7a4"},
+]
+columnar = [
+    {file = "Columnar-1.4.1-py3-none-any.whl", hash = "sha256:8efb692a7e6ca07dcc8f4ea889960421331a5dffa8e5af81f0a67ad8ea1fc798"},
+    {file = "Columnar-1.4.1.tar.gz", hash = "sha256:c3cb57273333b2ff9cfaafc86f09307419330c97faa88dcfe23df05e6fbb9c72"},
 ]
 commonmark = [
     {file = "commonmark-0.9.1-py2.py3-none-any.whl", hash = "sha256:da2f38c92590f83de410ba1a3cbceafbc74fee9def35f9251ba9a971d6d66fd9"},
@@ -2282,6 +2323,10 @@ PyJWT = [
 pylint = [
     {file = "pylint-2.15.2-py3-none-any.whl", hash = "sha256:cc3da458ba810c49d330e09013dec7ced5217772dec8f043ccdd34dae648fde8"},
     {file = "pylint-2.15.2.tar.gz", hash = "sha256:f63404a2547edb5247da263748771ac9a806ed1de4174cda01293c08ddbc2999"},
+]
+pymarkdownlnt = [
+    {file = "pymarkdownlnt-0.9.7-py3-none-any.whl", hash = "sha256:817ebd13b0cf9812fe63502948a12f8b332e855898458462a3b7a1fd6086531a"},
+    {file = "pymarkdownlnt-0.9.7.tar.gz", hash = "sha256:fe9e0bdc5edf0dd29206144c7bcded10175fdebedc69ca048163e22b29bebf32"},
 ]
 Pympler = [
     {file = "Pympler-1.0.1-py3-none-any.whl", hash = "sha256:d260dda9ae781e1eab6ea15bacb84015849833ba5555f141d2d9b7b7473b307d"},
