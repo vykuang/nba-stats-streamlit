@@ -18,9 +18,9 @@ def get_career_stats(player_id: str, get_request: bool = True) -> dict:
     return career_stats.get_normalized_json()
 
 
-def get_jsons(career_stats):
+def get_jsons(career_stats) -> tuple(dict, dict):
     career_stats_json = json.loads(career_stats.get_normalized_json())
     reg_season = career_stats_json["SeasonTotalsRegularSeason"][-1]
     post_season = career_stats_json["SeasonTotalsPostSeason"][-1]
 
-    return reg_season, post_season
+    return (reg_season, post_season)

@@ -50,5 +50,5 @@ repos:
           - id: pymarkdown
             args:
                 - scan
-                - \.
+                - .
                 - ./docs
