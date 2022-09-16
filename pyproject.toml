@@ -37,7 +37,6 @@ disable = [
   "invalid-sequence-index",
 ]
 
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
