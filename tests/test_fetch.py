@@ -59,3 +59,50 @@ def test_get_ids(monkeypatch):
 
     player = players.find_players_by_full_name()
     assert player["id"] == 123 and player["full_name"] == "first last"
+
+
+def test_fold_post_stats():
+    """Tests merge stat function"""
+    # setup
+    reg_season = {"PLAYER_ID": 123, "GP": 30, "FGM": 1, "FGA": 10}
+    post_season = {"PLAYER_ID": 123, "GP": 10, "FGM": 9, "FGA": 10}
+    merge_list = reg_season.keys()
+
+    # test
+    merged = fetch.fold_post_stats(reg_season, post_season, merge_list, 3.0)
+    assert merged.keys() == merge_list
+    assert merged["FGM"] == 5
+    assert merged["PLAYER_ID"] == 123
+
+
+def test_player_standard():
+    """Tests the player check function"""
+    # setup
+    num = 20
+    reg = {"MIN": num / 2, "GP": num / 2}
+    post = reg.copy()
+
+    assert fetch.player_meets_standard(reg, post, min_thd=num, gp_thd=num)
+    assert fetch.player_meets_standard(reg, post, min_thd=num + 1, gp_thd=num)
+    assert fetch.player_meets_standard(reg, post, min_thd=num, gp_thd=num + 1)
+    assert not fetch.player_meets_standard(reg, post, num + 1, num + 1)
+
+
+def test_merge_career(monkeypatch):
+    """Tests merge_career_stats by monkeypatching the various subfuncs and substituting in
+    Test results
+    """
+    # setup
+    def mock_pickle():
+        pkl = {
+            "SeasonTotalsRegularSeason": [{"PLAYER_ID": 1, "GP": 80, "MIN": 500}],
+            "SeasonTotalsPostSeason": [{"PLAYER_ID": 1, "GP": 8, "MIN": 40}],
+        }
+
+        return pkl
+
+    monkeypatch.setattr(
+        fetch,
+        "load_pickle",
+        mock_pickle,
+    )

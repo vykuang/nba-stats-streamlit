@@ -86,12 +86,12 @@ How would we define it in our `nba_api` tests?
 ```py
 # fetch.py
 
-from nba_api.stats.endpoints import playerstats
+from nba_api.stats.endpoints import playercareerstats
 
 def get_player_season(player_id):
-    """Retrieves player's season averages from nba's API"
+    """Retrieves player's season averages from nba's API"""
     # this is where the call happens
-    seasons = playerstats.PlayerStats(player_id)
+    seasons = playercareerstats.PlayerCareerStats(player_id)
     return seasons.get_normalized_json()
 
 ```
@@ -102,16 +102,35 @@ So now we have to monkeypatch the method inside `playercareerstats`? When that c
 # test_get_player_season.py
 from nba_api... import
 
-class MockCareerResponse:
-    """An instance of this will be returned by our monkeypatched func"""
-
-    @staticmethod
-    def get_normalized_json():
-        return {"mock_key": "mock_response"}
-
 def test_get_season(monkeypatch):
     def mock_get_career(*args, **kwargs):
-        return MockCareerResponse()
+        """Replaces .get_request(), so that our test does not
+        make API call to stats.nba.com
+        This func will just not do anything.
+        It takes in any amount of args, but returns nothing
+        since original arg also returns nothing, but changes
+        the class's self.properties.
+        """
 
-    # this is where we need to patch the API call
-    monkeypatch.set
+    def mock_get_json(*args, **kwargs):
+        """When we call career_stats.get_normalized_json(), it will
+        call this func instead
+        """
+        return {"mock_header": ["mock1", "mock2"]}
+
+    # patching the .get_request() instance method
+    monkeypatch.setattr(
+        playercareerstats.PlayerCareerStats,
+        "get_response",
+        mock_get_career,
+    )
+    # patching the .get_normalized_json() instance method
+    monkeypatch.setattr(
+        playercareerstats.PlayerCareerStats,
+        "get_normalized_json",
+        mock_get_json,
+    )
+    test_id = 2544
+    response = fetch.get_career_stats(player_id=test_id)
+    assert response["mock_header"] == ["mock1", "mock2"]
+```
