@@ -1,3 +1,10 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[metadata]
+name = "vk-streamlit-demo"
+
 [tool.poetry]
 name = "frontend"
 version = "0.1.0"
@@ -37,6 +44,4 @@ disable = [
   "invalid-sequence-index",
 ]
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[tool.pytest.ini_options]

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from nba_api.stats.endpoints import playercareerstats
 from nba_api.stats.static import players
 
@@ -88,15 +90,17 @@ def test_player_standard():
     assert not fetch.player_meets_standard(reg, post, num + 1, num + 1)
 
 
-def test_merge_career(monkeypatch):
+def test_merge_career(tmp_path, monkeypatch):
     """Tests merge_career_stats by monkeypatching the various subfuncs and substituting in
     Test results
     """
     # setup
-    def mock_pickle():
+    def mock_pickle(*args, **kwargs):
         pkl = {
-            "SeasonTotalsRegularSeason": [{"PLAYER_ID": 1, "GP": 80, "MIN": 500}],
-            "SeasonTotalsPostSeason": [{"PLAYER_ID": 1, "GP": 8, "MIN": 40}],
+            1: {
+                "SeasonTotalsRegularSeason": [{"PLAYER_ID": 1, "GP": 80, "MIN": 500}],
+                "SeasonTotalsPostSeason": [{"PLAYER_ID": 1, "GP": 8, "MIN": 40}],
+            }
         }
 
         return pkl
@@ -106,3 +110,18 @@ def test_merge_career(monkeypatch):
         "load_pickle",
         mock_pickle,
     )
+
+    def mock_fold(*args, **kwargs) -> dict:
+        sample_fold = {"PLAYER_ID": 1, "GP": 88, "MIN": 540}
+
+        return sample_fold
+
+    monkeypatch.setattr(
+        fetch,
+        "fold_post_stats",
+        mock_fold,
+    )
+    result = fetch.merge_career_stats(tmp_path)
+
+    assert Path(tmp_path / "nba_stats.pkl").exists()
+    assert result.to_dict(orient="dict") == {"GP": {1: 88}, "MIN": {1: 540}}

@@ -1,5 +1,20 @@
 # Pytest
 
+## Note on `src` layout
+
+Been over this a million times but still worth it to recap.
+
+[Per pytest good integration practices](https://docs.pytest.org/en/7.1.x/explanation/goodpractices.html), we're expected to test against the *installed* version of our package, rather than the local version. To do so, do this:
+
+```bash
+cd <proj_root>
+pip install --editable .
+```
+
+Which allows us to edit our package, and rerun tests against those edits. Tucking our code inside `/src` insulates pytest from testing local code, and forces it to test against the installed version
+
+I don't think I will follow it for this project since it's not intended to be distributed as a package.
+
 ## Unittests
 
 What unit tests are we running here?
@@ -134,3 +149,9 @@ def test_get_season(monkeypatch):
     response = fetch.get_career_stats(player_id=test_id)
     assert response["mock_header"] == ["mock1", "mock2"]
 ```
+
+## Logging
+
+Pytest automatically displays `WARNING` level and above logs to console.
+
+Use `--log-cli-level=DEBUG` or any other level to explicitly set the severity for that particular pytest run

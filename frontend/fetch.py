@@ -1,4 +1,5 @@
-import json
+import argparse
+import logging
 import pickle
 import random
 import time
@@ -8,11 +9,6 @@ from typing import Any, Tuple
 import pandas as pd
 from nba_api.stats.endpoints import playercareerstats
 from nba_api.stats.static import players
-
-
-def get_ids(name: str) -> list:
-    name_hits = players.find_players_by_full_name(name)
-    return name_hits
 
 
 def get_career_stats(player_id: str, get_request: bool = True) -> dict:
@@ -38,10 +34,7 @@ def player_meets_standard(
     reg: dict, post: dict, min_thd: int = 500, gp_thd: int = 40
 ) -> bool:
     """Does this player have >= 500 min or >= 40 games played?"""
-    if reg["MIN"] + post["MIN"] >= min_thd or reg["GP"] + post["GP"] >= gp_thd:
-        return True
-    else:
-        return False
+    return bool(reg["MIN"] + post["MIN"] >= min_thd or reg["GP"] + post["GP"] >= gp_thd)
 
 
 def fold_post_stats(
@@ -101,6 +94,8 @@ def fetch(pkl_path: Path = Path("../data")) -> None:
 
 def merge_career_stats(pkl_path: Path = Path("../data")) -> pd.DataFrame:
     """Reads the staged .pkl and preprocess into pd.DataFrame for our model"""
+
+    logger = logging.getLogger("merge")
     careers = load_pickle(pkl_path / "careerstats.pkl")
     # remove collinear stats
     merge_stats = [
@@ -133,8 +128,35 @@ def merge_career_stats(pkl_path: Path = Path("../data")) -> pd.DataFrame:
             merge_stats=merge_stats,
         )
         if merged:
-            reg_post_merge.append[merged]
+            reg_post_merge.append(merged)
 
-    df = pd.DataFrame.from_dict(reg_post_merge).set_index("PLAYER_ID")
+    logger.debug(f"merged dicts: , {reg_post_merge}")
+    df = pd.DataFrame.from_dict(
+        reg_post_merge,
+        orient="columns",
+    ).set_index("PLAYER_ID")
+    logger.debug(
+        f"index: {list(df.index)}, content: {df.iloc[:2].to_dict(orient='dict')}"
+    )
     dump_pickle(df, pkl_path / "nba_stats.pkl")
-    return
+    return df
+
+
+def prepare(pkl_path: Path) -> pd.DataFrame:
+    if not pkl_path.exists():
+        pkl_path.mkdir(parents=True, exist_ok=False)
+
+    fetch(pkl_path=pkl_path)
+    return merge_career_stats(pkl_path=pkl_path)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(prog="NBA career stats fetch")
+    parser.add_argument(
+        "--pkl_path",
+        "-p",
+        type=Path,
+        default="../data",
+    )
+    args = parser.parse_args()
+    prepare(pkl_path=args.pkl_path)
