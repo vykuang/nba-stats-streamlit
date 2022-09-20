@@ -19,3 +19,35 @@ To gather the player_ids, use the `static` endpoint to gather all active players
 3. Check that `MIN` played > 500 minutes, or 'GP' > 40; remove others
 4. Fold the SeasonTotalsRegular and SeasonTotalsPost to a single dict
 5. Store all player's data into .json for later storage into postgres
+
+## Execution
+
+* Need to add a progress bar and log DEBUG output (what player's stats am I requesting?)
+* Switch to `.csv` for easy append so that I can save my progress if my API calls are blocked:
+
+    ```py
+    import csv
+    csv_path = '../data/foo.csv'
+    fields = ['a', 'b', 'c']
+    # 'a' for append
+    with open(csv_path, 'a') as f:
+        write = csv.writer(f)
+        write.writerow(fields)
+    ```
+
+    * Maybe this isn't as straightforward. For one thing, there's a lot of commas in JSON. For two, csv is just not as expressive. We've got list of dicts of lists of dicts. It's all nested. Ideally this would be flattened before storing as csv.
+    * What if we just stored it as native json?
+
+* use `tqdm` as recommended in python for machine learning to output a progress bar for fetching the 500+ API calls
+
+    ```py
+    from tqdm import tqdm
+    for player in tqdm(players):
+        stat = fetch_stat(player)
+
+    """
+    %|▌              | 3/587 [00:08<28:52,  2.97s/it]
+    """
+    ```
+
+* Handle players that may not have played in either post or regular season

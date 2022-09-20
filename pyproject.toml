@@ -1,3 +1,23 @@
+[project]
+name = "vk-streamlit-demo"
+version = "0.0.1"
+authors = [
+  { name="Victor", email="vykuang92@gmail.com" },
+]
+description = "Streamlit demo for a basic ML model trained on NBA career stats"
+readme = "README.md"
+license = { file="LICENSE" }
+requires-python = ">=3.9.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/vykuang/nba-stats-streamlit"
+"Bug Tracker" =  "https://github.com/vykuang/nba-stats-streamlit/issues"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
@@ -19,6 +39,7 @@ mlflow = "~1.28.0"
 Flask = "^2.2.2"
 streamlit = "^1.12.2"
 nba-api = "^1.1.11"
+tqdm = "^4.64.1"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -42,6 +63,7 @@ disable = [
   "no-else-return",
   "line-too-long",
   "invalid-sequence-index",
+  "logging-fstring-interpolation",
 ]
 
 [tool.pytest.ini_options]

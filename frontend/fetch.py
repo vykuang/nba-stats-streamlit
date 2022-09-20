@@ -1,7 +1,9 @@
 import argparse
+import json
 import logging
 import pickle
 import random
+import sys
 import time
 from pathlib import Path
 from typing import Any, Tuple
@@ -9,6 +11,9 @@ from typing import Any, Tuple
 import pandas as pd
 from nba_api.stats.endpoints import playercareerstats
 from nba_api.stats.static import players
+from tqdm import tqdm
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 
 
 def get_career_stats(player_id: str, get_request: bool = True) -> dict:
@@ -21,11 +26,19 @@ def get_career_stats(player_id: str, get_request: bool = True) -> dict:
     return career_stats.get_normalized_json()
 
 
-def get_jsons(career_stats: dict) -> Tuple[dict, dict]:
+def get_jsons(career_stats: str) -> Tuple[dict, dict]:
     """Takes in playercareeer dataset as dict and returns
     the regular and post season totals, for the most recent season"""
-    reg_season = career_stats["SeasonTotalsRegularSeason"][-1]
-    post_season = career_stats["SeasonTotalsPostSeason"][-1]
+    logger = logging.getLogger("get_jsons")
+    career_stats = json.loads(career_stats)
+    logger.debug(f"{career_stats}")
+    reg_season = []
+    post_season = []
+    if career_stats["SeasonTotalsRegularSeason"]:
+        reg_season = career_stats["SeasonTotalsRegularSeason"][-1]
+
+    if career_stats["SeasonTotalsPostSeason"]:
+        post_season = career_stats["SeasonTotalsPostSeason"][-1]
 
     return (reg_season, post_season)
 
@@ -34,26 +47,44 @@ def player_meets_standard(
     reg: dict, post: dict, min_thd: int = 500, gp_thd: int = 40
 ) -> bool:
     """Does this player have >= 500 min or >= 40 games played?"""
-    return bool(reg["MIN"] + post["MIN"] >= min_thd or reg["GP"] + post["GP"] >= gp_thd)
+    if reg and post:
+        meets_standard = bool(
+            reg["MIN"] + post["MIN"] >= min_thd or reg["GP"] + post["GP"] >= gp_thd
+        )
+    elif reg and not post:
+        meets_standard = bool(reg["MIN"] >= min_thd or reg["GP"] >= gp_thd)
+    elif not reg and post:
+        meets_standard = bool(post["MIN"] >= min_thd or post["GP"] >= gp_thd)
+    else:
+        meets_standard = False
+    return meets_standard
 
 
 def fold_post_stats(
     reg_season: dict, post_season: dict, merge_stats: list, post_wt: float = 2.0
 ) -> dict:
     """Merge stats proportionally via games played"""
+    merged = {}
     if player_meets_standard(reg_season, post_season):
-        merged = {}
 
-        gp_tot = reg_season["GP"] + post_wt * post_season["GP"]
-        for stat in merge_stats:
-            merged[stat] = (
-                reg_season["GP"] / gp_tot * reg_season[stat]
-                + post_wt * post_season["GP"] / gp_tot * post_season[stat]
-            )
+        if reg_season and post_season:
 
-        merged["PLAYER_ID"] = reg_season["PLAYER_ID"]
-        # merged['SEASON_ID'] = reg_season['SEASON_ID']
-        return merged
+            gp_tot = reg_season["GP"] + post_wt * post_season["GP"]
+            for stat in merge_stats:
+                merged[stat] = (
+                    reg_season["GP"] / gp_tot * reg_season[stat]
+                    + post_wt * post_season["GP"] / gp_tot * post_season[stat]
+                )
+
+            merged["PLAYER_ID"] = reg_season["PLAYER_ID"]
+            # merged['SEASON_ID'] = reg_season['SEASON_ID']
+        elif reg_season and not post_season:
+            merged = {stat: reg_season[stat] for stat in merge_stats}
+            merged["PLAYER_ID"] = reg_season["PLAYER_ID"]
+        else:
+            merged = {stat: post_season[stat] for stat in merge_stats}
+            merged["PLAYER_ID"] = post_season["PLAYER_ID"]
+    return merged
 
 
 def dump_pickle(obj, fp: Path) -> None:
@@ -74,12 +105,19 @@ def fetch(pkl_path: Path = Path("../data")) -> None:
     This is separate from preprocessing since API calls are an
     expensive resource and should not be retried often
     """
+    stats_path = Path(pkl_path / "careerstats.pkl")
+    if stats_path.exists():
+        return
+
     active = players.get_active_players()
+    player_map_path = Path(pkl_path / "player_map.pkl")
     player_dict = {}
     active_stats = {}
-    for player in active:
+    for player in tqdm(active):
         # build map to find player name
         player_dict[player["id"]] = player["full_name"]
+        # progress logging
+        # logging.info(f'\rProgress: {idx/num_players:.2%}\tRequesting stat for {player["full_name"]}', end="\r")
         # calls stats.nba API for each active player
         career_stats = get_career_stats(player["id"])
         active_stats[player["id"]] = career_stats
@@ -88,8 +126,8 @@ def fetch(pkl_path: Path = Path("../data")) -> None:
         wait = random.gammavariate(alpha=9.0, beta=0.4)
         time.sleep(wait)
 
-    dump_pickle(active_stats, pkl_path / "careerstats.pkl")
-    dump_pickle(player_dict, pkl_path / "player_map.pkl")
+    dump_pickle(active_stats, stats_path)
+    dump_pickle(player_dict, player_map_path)
 
 
 def merge_career_stats(pkl_path: Path = Path("../data")) -> pd.DataFrame:
@@ -158,5 +196,6 @@ if __name__ == "__main__":
         type=Path,
         default="../data",
     )
+
     args = parser.parse_args()
     prepare(pkl_path=args.pkl_path)

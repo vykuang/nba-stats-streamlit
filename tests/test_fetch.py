@@ -125,3 +125,20 @@ def test_merge_career(tmp_path, monkeypatch):
 
     assert Path(tmp_path / "nba_stats.pkl").exists()
     assert result.to_dict(orient="dict") == {"GP": {1: 88}, "MIN": {1: 540}}
+
+
+def test_get_json():
+    """Tests for 1) is input json.loads()-able and
+    2) whether it contains the relevant keys, and
+    3) validity of the value of those keys"""
+    # setup
+    # mock_stats = """{"SeasonTotalsRegularSeason": [False, True], "SeasonTotalsPostSeason": [False, True]}"""
+    mock_stats = (
+        '{"SeasonTotalsRegularSeason": [1, 2], "SeasonTotalsPostSeason": [2,3]}'
+    )
+    # execute
+    reg, post = fetch.get_jsons(mock_stats)
+
+    # assert
+    assert reg == 2
+    assert post == 3
