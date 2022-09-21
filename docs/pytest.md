@@ -19,14 +19,14 @@ I don't think I will follow it for this project since it's not intended to be di
 
 What unit tests are we running here?
 
-* data fetch
-    * test json response; requires online connection and uses up some arbitrary read request limit
-* data preprocessing
-    * prepare some default json response for transformations
-    * implement mocking/monkeypatching where necessary
-* orchestration
-    * test that the wrapped prefect function works as intended?
-    *
+- data fetch
+  - test json response; requires online connection and uses up some arbitrary read request limit
+- data preprocessing
+  - prepare some default json response for transformations
+  - implement mocking/monkeypatching where necessary
+- orchestration
+  - test that the wrapped prefect function works as intended?
+  -
 
 ## Monkeypatch vs mock
 
@@ -38,9 +38,9 @@ Generally both can be used so that third party calls aren't relied upon whenever
 
 Other features:
 
-* set/del class attributes
-* set/del dict
-* set/del environment vars.
+- set/del class attributes
+- set/del dict
+- set/del environment vars.
 
 ### mocking API response with `monkeypatch.setattr`
 
@@ -155,3 +155,26 @@ def test_get_season(monkeypatch):
 Pytest automatically displays `WARNING` level and above logs to console.
 
 Use `--log-cli-level=DEBUG` or any other level to explicitly set the severity for that particular pytest run
+
+### Logging in general
+
+To log to console, add a `streamHandler` for `sys.stdout`:
+
+```py
+# try_log.py
+import logging
+import sys
+
+def foo(num: int = 5, log_level: int = logging.DEBUG):
+    logger = logging.getLogger('foo')
+    logger.setLevel(log_level)
+
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(logging.DEBUG)
+
+    logger.addHandler(handler)
+
+    for i in range(num):
+        logger.debug(f'debug: {i}')
+        logger.info(f'info: {i}')
+```
