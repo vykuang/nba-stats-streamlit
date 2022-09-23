@@ -15,6 +15,6 @@ A basic end-to-end deployment of a simple model using data from NBA stats.
 - mlflow tracks experiments
 - Flask acts as basic backend (could sub gunicorn if things get serious)
 - Streamlit as frontend
-- poetry to manage dependencies
+- poetry manages dependencies
 
 ## Setup
