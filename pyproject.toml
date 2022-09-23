@@ -40,6 +40,7 @@ Flask = "^2.2.2"
 streamlit = "^1.12.2"
 nba-api = "^1.1.11"
 tqdm = "^4.64.1"
+hyperopt = "^0.2.7"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -66,6 +67,7 @@ disable = [
   "line-too-long",
   "invalid-sequence-index",
   "logging-fstring-interpolation",
+  "invalid-name",
 ]
 
 [tool.pytest.ini_options]
