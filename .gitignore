@@ -2,7 +2,7 @@
 *.json
 *.pkl
 *.csv
-./mlruns
+mlruns/
 *.db
 
 # Byte-compiled / optimized / DLL files
