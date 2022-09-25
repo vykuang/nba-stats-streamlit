@@ -16,5 +16,3 @@ A basic end-to-end deployment of a simple model using data from NBA stats.
 - Flask acts as basic backend (could sub gunicorn if things get serious)
 - Streamlit as frontend
 - poetry manages dependencies
-
-## Setup

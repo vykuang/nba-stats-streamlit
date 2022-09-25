@@ -15,6 +15,7 @@ from hyperopt import STATUS_OK, Trials, fmin, hp, tpe
 from hyperopt.pyll import scope
 from mlflow.entities import ViewType
 from mlflow.tracking import MlflowClient
+from nba_api.stats.static import players
 from sklearn import cluster
 from sklearn.decomposition import PCA
 from sklearn.metrics import (
@@ -291,6 +292,61 @@ def _run(data_path, max_evals, log_level):
     logger.info("Registering model")
     model_vers = register_model(run_id)
     logger.debug(f"{model_vers}")
+
+
+def retrieve() -> mlflow.pyfunc.PyFuncModel:
+    """
+    Retrieves and returns the latest version of the registered model
+    """
+    logger = logging.getLogger("script")
+    logger.setLevel(logging.INFO)
+
+    model_filter = f"name={MLFLOW_REGISTERED_MODEL}"
+    mv_search = client.search_model_versions(model_filter)
+    logger.info(f"MLflow model versions returned: {len(mv_search)}")
+
+    model_uris = [mv.source for mv in mv_search if mv.current_stage == "Production"]
+
+    if model_uris:
+        logger.info(f"selected model URI: {model_uris[-1]}")
+        # alternatively model_uri could also be direct path to s3 bucket:
+        # s3://{MLFLOW_ARTIFACT_STORE}/<exp_id>/<run_id>/artifacts/models
+        # the models:/model_name/Production uri is only useable if MLflow server is up
+        model = mlflow.pyfunc.load_model(
+            # model_uri=f'models:/{MLFLOW_REGISTERED_MODEL}/Production'
+            model_uri=model_uris[0]
+        )
+        return model
+    else:
+        logger.critical("No production stage model found")
+        raise Exception("No model found in production stage")
+
+
+def reveal_group(data_orig, model: mlflow.pyfunc.PyFuncModel):
+    """
+    Use a logged model to visualize what label's what
+    """
+    data = data_orig.copy()
+    label_preds = model.predict(data)
+    data["label_pred"] = label_preds
+    data["pts_ast_reb"] = np.sum([data.PTS, data.DREB, data.OREB, data.AST], axis=0)
+
+    # creating player_map to get names from ID
+    players_active = players.get_active_players()
+    player_map = {player["id"]: player["full_name"] for player in players_active}
+
+    data["full_name"] = [player_map[player_id] for player_id in list(data.index)]
+    df_sort = data.groupby("label_pred").apply(
+        lambda x: x.sort_values(["pts_ast_reb"], ascending=False)
+    )
+    df_samp = []
+    for label in np.unique(label_preds):
+        label_samples = df_sort.loc[[label], "full_name"].head(5)
+        df_samp.append(label_samples)
+
+    df_merge = pd.concat(df_samp, axis=0).loc[:, ["full_name", "label_pred"]]
+    df_merge.to_csv("./player_labels_sample.csv")
+    return df_merge
 
 
 if __name__ == "__main__":
