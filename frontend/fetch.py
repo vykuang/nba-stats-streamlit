@@ -23,14 +23,13 @@ def get_career_stats(player_id: str, get_request: bool = True) -> dict:
         per_mode36="Per36",
         get_request=get_request,
     )
-    return career_stats.get_normalized_json()
+    return json.loads(career_stats.get_normalized_json())
 
 
-def get_jsons(career_stats: str) -> Tuple[dict, dict]:
+def get_jsons(career_stats: dict) -> Tuple[dict, dict]:
     """Takes in playercareeer dataset as dict and returns
     the regular and post season totals, for the most recent season"""
     logger = logging.getLogger("get_jsons")
-    career_stats = json.loads(career_stats)
     logger.debug(f"{career_stats}")
     reg_season = []
     post_season = []
@@ -99,6 +98,27 @@ def load_pickle(fp: Path) -> Any:
         return pickle.load(f_in)
 
 
+def append_json(json_path: Path, new_data: dict, update_key: str = None) -> None:
+    """Loading and updating dict to the json"""
+    with open(json_path, "r", encoding="utf-8") as file:
+        data = json.load(json_path)
+        if update_key:
+            data[update_key].append(new_data)
+        else:
+            data.update(new_data)
+
+    with open(
+        json_path,
+        "w",
+        encoding="utf-8",
+    ) as file:
+        json.dump(
+            data,
+            file,
+            indent=4,
+        )
+
+
 def fetch(pkl_path: Path = Path("../data")) -> None:
     """Calls stats.nba API for each active player and stages
     in local dir
@@ -106,13 +126,15 @@ def fetch(pkl_path: Path = Path("../data")) -> None:
     expensive resource and should not be retried often
     """
     stats_path = Path(pkl_path / "careerstats.pkl")
+    # don't call API if the pkl already exists
     if stats_path.exists():
         return
+
+    json_path = Path(pkl_path / "careerstats.json")
 
     active = players.get_active_players()
     player_map_path = Path(pkl_path / "player_map.pkl")
     player_dict = {}
-    active_stats = {}
     for player in tqdm(active):
         # build map to find player name
         player_dict[player["id"]] = player["full_name"]
@@ -120,11 +142,14 @@ def fetch(pkl_path: Path = Path("../data")) -> None:
         # logging.info(f'\rProgress: {idx/num_players:.2%}\tRequesting stat for {player["full_name"]}', end="\r")
         # calls stats.nba API for each active player
         career_stats = get_career_stats(player["id"])
-        active_stats[player["id"]] = career_stats
+        append_json(json_path, {player["id"]: career_stats})
 
         # avoids hammering the API and being blocked
         wait = random.gammavariate(alpha=9.0, beta=0.4)
         time.sleep(wait)
+
+    with open(json_path, "r", encoding="utf-8") as file:
+        active_stats = json.load(file)
 
     dump_pickle(active_stats, stats_path)
     dump_pickle(player_dict, player_map_path)

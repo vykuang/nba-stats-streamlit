@@ -39,6 +39,22 @@ To gather the player_ids, use the `static` endpoint to gather all active players
   - Maybe this isn't as straightforward. For one thing, there's a lot of commas in JSON. For two, csv is just not as expressive. We've got list of dicts of lists of dicts. It's all nested. Ideally this would be flattened before storing as csv.
   - What if we just stored it as native json?
 
+### Incremental writes
+
+In the interest of saving data, and possibly picking up where API requests were interrupted, program should write results to disc after each successful call.
+
+Most straightforward way is the following
+
+1. Call API request
+1. Open .json
+1. Load dict from .json
+1. Update dict with API result
+1. Save updated dict in .json
+
+The *inelegance* of it is that we're repeating the file I/O each time we make the call. The reality of is this just works.
+
+### Progress bar
+
 - use `tqdm` as recommended in python for machine learning to output a progress bar for fetching the 500+ API calls
 
   ```py
