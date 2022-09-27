@@ -98,25 +98,15 @@ def load_pickle(fp: Path) -> Any:
         return pickle.load(f_in)
 
 
-def append_json(json_path: Path, new_data: dict, update_key: str = None) -> None:
+def append_json(json_path: Path, new_data: dict) -> None:
     """Loading and updating dict to the json"""
     with open(json_path, "r", encoding="utf-8") as file:
-        data = json.load(json_path)
-        if update_key:
-            data[update_key].append(new_data)
-        else:
-            data.update(new_data)
+        data = json.load(file)
 
-    with open(
-        json_path,
-        "w",
-        encoding="utf-8",
-    ) as file:
-        json.dump(
-            data,
-            file,
-            indent=4,
-        )
+    data.update(new_data)
+
+    with open(json_path, "w", encoding="utf-8") as file:
+        json.dump(data, file, indent=4)
 
 
 def fetch(pkl_path: Path = Path("../data")) -> None:
