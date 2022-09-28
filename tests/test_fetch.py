@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from nba_api.stats.endpoints import playercareerstats
@@ -142,3 +143,22 @@ def test_get_json():
     # assert
     assert reg == 2
     assert post == 3
+
+
+def test_append_json(tmp_path):
+    """Tests the incremental json updating function"""
+    # setup
+    json_path = tmp_path / "test_append.json"
+    with open(json_path, "w", encoding="utf-8") as file:
+        json.dump({}, file, indent=4)
+
+    # note that using numbers anywhere will result in str being read back
+    test_dict = {"id": [{"a": ["x"]}, {"b": ["y"]}, {"c": ["z"]}]}
+    # run func
+    fetch.append_json(json_path, test_dict)
+
+    # assert
+    with open(json_path, "r", encoding="utf-8") as file:
+        result = json.load(file)
+
+    assert result == test_dict
