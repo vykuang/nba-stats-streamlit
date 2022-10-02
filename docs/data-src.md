@@ -30,6 +30,8 @@ If I want to compare across eras, I need a way to delineate the seasons. My curr
 
 `leaguedashplayerstats` seems to be a kind of catch-all endpoint for all the common stat, and allows as to filter by season and regular/post for their aggregated stats. Honestly this looks exactly like what I need, in only one API call as well. Or two, if you count regular plus post season. We could also extend it by including `Advanced` stats as well, by changing `MeasureType` param from `Base` to `Advanced`
 
+If I can get a whole season's worth in one go it makes more sense to get multiple seasons
+
 ## Pipeline
 
 1. Gather all active player_ids via static endpoint
