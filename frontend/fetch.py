@@ -109,7 +109,7 @@ def append_json(json_path: Path, new_data: dict) -> None:
         json.dump(data, file, indent=4)
 
 
-def fetch(pkl_path: Path = Path("../data")) -> None:
+def fetch_career_stats(pkl_path: Path = Path("../data")) -> None:
     """Calls stats.nba API for each active player and stages
     in local dir
     This is separate from preprocessing since API calls are an
@@ -124,12 +124,8 @@ def fetch(pkl_path: Path = Path("../data")) -> None:
 
     active = players.get_active_players()
     player_map_path = Path(pkl_path / "player_map.pkl")
-    player_dict = {}
+
     for player in tqdm(active):
-        # build map to find player name
-        player_dict[player["id"]] = player["full_name"]
-        # progress logging
-        # logging.info(f'\rProgress: {idx/num_players:.2%}\tRequesting stat for {player["full_name"]}', end="\r")
         # calls stats.nba API for each active player
         career_stats = get_career_stats(player["id"])
         append_json(json_path, {player["id"]: career_stats})
@@ -142,7 +138,6 @@ def fetch(pkl_path: Path = Path("../data")) -> None:
         active_stats = json.load(file)
 
     dump_pickle(active_stats, stats_path)
-    dump_pickle(player_dict, player_map_path)
 
 
 def merge_career_stats(pkl_path: Path = Path("../data")) -> pd.DataFrame:
@@ -150,20 +145,19 @@ def merge_career_stats(pkl_path: Path = Path("../data")) -> pd.DataFrame:
 
     logger = logging.getLogger("merge")
     careers = load_pickle(pkl_path / "careerstats.pkl")
-    # remove collinear stats
     merge_stats = [
-        # 'FGM',
+        "FGM",  # to be removed in preprocess
         "FGA",
         "FG_PCT",
-        # 'FG3M',
+        "FG3M",  # marked
         "FG3A",
         "FG3_PCT",
-        # 'FTM',
+        "FTM",  # marked
         "FTA",
         "FT_PCT",
         "OREB",
         "DREB",
-        "REB",
+        "REB",  # marked
         "AST",
         "STL",
         "BLK",
@@ -188,6 +182,14 @@ def merge_career_stats(pkl_path: Path = Path("../data")) -> pd.DataFrame:
         reg_post_merge,
         orient="columns",
     ).set_index("PLAYER_ID")
+
+    logger.debug(df)
+    active = players.get_active_players()
+    player_dict = {player["id"]: player["full_name"] for player in active}
+
+    # use rec.name to access the row's index value, i.e. player_id
+    df["full_name"] = df.apply(lambda rec: player_dict[rec.name], axis=1)
+
     logger.debug(
         f"index: {list(df.index)}, content: {df.iloc[:2].to_dict(orient='dict')}"
     )
@@ -199,12 +201,12 @@ def prepare(pkl_path: Path) -> pd.DataFrame:
     if not pkl_path.exists():
         pkl_path.mkdir(parents=True, exist_ok=False)
 
-    fetch(pkl_path=pkl_path)
+    fetch_career_stats(pkl_path=pkl_path)
     return merge_career_stats(pkl_path=pkl_path)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog="NBA career stats fetch")
+    parser = argparse.ArgumentParser(prog="Fetch NBA career stats")
     parser.add_argument(
         "--pkl_path",
         "-p",

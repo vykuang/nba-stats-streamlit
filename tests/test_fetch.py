@@ -96,11 +96,17 @@ def test_merge_career(tmp_path, monkeypatch):
     Test results
     """
     # setup
+    id_lebron = 2544
+
     def mock_pickle(*args, **kwargs):
         pkl = {
             1: {
-                "SeasonTotalsRegularSeason": [{"PLAYER_ID": 1, "GP": 80, "MIN": 500}],
-                "SeasonTotalsPostSeason": [{"PLAYER_ID": 1, "GP": 8, "MIN": 40}],
+                "SeasonTotalsRegularSeason": [
+                    {"PLAYER_ID": id_lebron, "GP": 80, "MIN": 500}
+                ],
+                "SeasonTotalsPostSeason": [
+                    {"PLAYER_ID": id_lebron, "GP": 8, "MIN": 40}
+                ],
             }
         }
 
@@ -113,7 +119,7 @@ def test_merge_career(tmp_path, monkeypatch):
     )
 
     def mock_fold(*args, **kwargs) -> dict:
-        sample_fold = {"PLAYER_ID": 1, "GP": 88, "MIN": 540}
+        sample_fold = {"PLAYER_ID": id_lebron, "GP": 88, "MIN": 540}
 
         return sample_fold
 
@@ -122,10 +128,14 @@ def test_merge_career(tmp_path, monkeypatch):
         "fold_post_stats",
         mock_fold,
     )
-    result = fetch.merge_career_stats(tmp_path)
+    result = fetch.merge_career_stats(tmp_path).to_dict(orient="dict")
 
     assert Path(tmp_path / "nba_stats.pkl").exists()
-    assert result.to_dict(orient="dict") == {"GP": {1: 88}, "MIN": {1: 540}}
+    assert result == {
+        "GP": {id_lebron: 88},
+        "MIN": {id_lebron: 540},
+        "full_name": {id_lebron: "LeBron James"},
+    }
 
 
 def test_get_json():

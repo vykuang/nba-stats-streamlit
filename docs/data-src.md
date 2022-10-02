@@ -12,6 +12,24 @@ Couldn't get it to work; unable to pass multiple game_IDs to fetch the stats. Th
 
 To gather the player_ids, use the `static` endpoint to gather all active players.
 
+### UPDATE
+
+Per [this post on SOF](https://stackoverflow.com/a/71556033/5496416) we can view what exactly the request header was when we make a request via nba.com console, and through that, I found out that to pass through multiple game_ids, they must be delimited with `|`, instead of the default `&`.
+
+I need to find the source code where they compose the request header and modify the `&` to `|`.
+
+Source code doesn't seem to do any of that in the first place. The `&` comes from the list being passed to it. Perhaps I can just pass a single string where the IDs are delimited by `|`, instead of a list.
+
+Breakthrough here is definitely this snippet:
+
+> You find the endpoint by opening Dev Tools (shift-ctrl-i) and look under Network -> XHR (you may need to refresh the page). Watch the panel for the requests to start popping up, and find the one that has your data. Go to Headers to find the info needed to make the request
+
+### Differentiating by season
+
+If I want to compare across eras, I need a way to delineate the seasons. My current workflow simply retrieves all active players from the present, but of course that leaves out all retired players, so how would I retrieve active players for each season? Perhaps some combination of `teamgamelog`?
+
+`leaguedashplayerstats` seems to be a kind of catch-all endpoint for all the common stat, and allows as to filter by season and regular/post for their aggregated stats. Honestly this looks exactly like what I need, in only one API call as well. Or two, if you count regular plus post season. We could also extend it by including `Advanced` stats as well, by changing `MeasureType` param from `Base` to `Advanced`
+
 ## Pipeline
 
 1. Gather all active player_ids via static endpoint
