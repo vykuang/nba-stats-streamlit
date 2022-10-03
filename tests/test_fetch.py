@@ -164,6 +164,8 @@ def test_append_json(tmp_path):
 
     # note that using numbers anywhere will result in str being read back
     test_dict = {"id": [{"a": ["x"]}, {"b": ["y"]}, {"c": ["z"]}]}
+    # diff ID, same content as test_dict
+    test_dict_add = {"id2": test_dict["id"]}
     # run func
     fetch.append_json(json_path, test_dict)
 
@@ -172,3 +174,10 @@ def test_append_json(tmp_path):
         result = json.load(file)
 
     assert result == test_dict
+
+    fetch.append_json(json_path, test_dict_add)
+
+    with open(json_path, "r", encoding="utf-8") as file:
+        result = json.load(file)
+
+    assert result["id2"] == test_dict["id"]
