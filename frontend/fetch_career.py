@@ -23,7 +23,7 @@ def get_career_stats(player_id: str, get_request: bool = True) -> dict:
         per_mode36="Per36",
         get_request=get_request,
     )
-    return json.loads(career_stats.get_normalized_json())
+    return career_stats.get_normalized_json()
 
 
 def get_jsons(career_stats: dict) -> Tuple[dict, dict]:
