@@ -89,6 +89,8 @@ The *inelegance* of it is that we're repeating the file I/O each time we make th
 
 - Handle players that may not have played in either post or regular season
 
+Maybe not needed anymore if I just need to call `leaguedash` twice.
+
 ## Data cleaning
 
 Originally did *some* data cleaning in the fetching stage. I'm beginning to think that all of it should be left alone, and any transformations should wait until the actual data cleaning and feature engineering stage.
@@ -97,3 +99,4 @@ When compiling, I thought of dropping some features which are by design collinea
 
 - I missed one, so I had to drop it in another data cleaning phase
 - more feature engineering had to be done anyway, so data cleaning wasn't optional
+- `fetch_league` should get the raw data and save the data cleaning afterwards
