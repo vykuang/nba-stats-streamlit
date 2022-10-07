@@ -8,6 +8,17 @@ A basic end-to-end deployment of a simple model using data from NBA stats.
   - Train on the 2021-2022 season's averages for each player
   - Clustering to reveal the groups, if any
   - User PUTs their request in the form of a collection of seasonal stat averages, and the model should respond with the predicted class of that player, along with some comparisons from the training set
+- Seems cumbersome and altogether not really worthwhile to enter some stats of a fictitious player to see a comparison
+  - User selects the following:
+    1. season, e.g. `2020-21`
+    1. player from that season in a dropdown menu
+    1. another season from which the user wants to draw player comparison
+  - Model returns the top three most similar players from the comparison season
+  - For example if I select:
+    1. `2004-05`
+    1. `Kobe Bryant`
+    1. `1995-96`
+       I might expect to see `Michael Jordan`, but not `David Robinson`
 
 ## Architecture
 
@@ -16,3 +27,32 @@ A basic end-to-end deployment of a simple model using data from NBA stats.
 - Flask acts as basic backend (could sub gunicorn if things get serious)
 - Streamlit as frontend
 - poetry manages dependencies
+
+## What will streamlit do?
+
+Streamlit will act is the frontend interface that the end-user interacts with.
+
+```
+* User will select the input parameters:
+    * player,
+    * player season,
+    * comparison season
+* Streamlit will have a visualization template for the season stats, and how they might differ or overlap with each other
+    * Distributions of key stats across the seasons, e.g. PTS, 3GA
+    * Run the pre-trained model to find similar players based on user input
+    * Visualize contrast the player comps on a scatterplot
+```
+
+## How do we get there?
+
+Streamlit will require:
+
+- Trained model, perhaps in `pickle` form
+- `leaguedash` data for all the seasons
+  - Do we pre-download everything first? Have that be part of the initialization?
+  - Doesn't make much sense to request it ad-hoc for every request
+  - Perhaps we *could* do that, if we also save those results so it can be reused for later queries
+
+### Deciding player similarity
+
+The stat ranks will play a large part in determining the similarity, but only after the label is revealed by the model. After that we could feature-engineer some kind of aggregate ranking to be applied intra-label, and then pick players from the comparison season adjacent to the selected player's rank in the current season

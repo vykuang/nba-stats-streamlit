@@ -100,3 +100,33 @@ When compiling, I thought of dropping some features which are by design collinea
 - I missed one, so I had to drop it in another data cleaning phase
 - more feature engineering had to be done anyway, so data cleaning wasn't optional
 - `fetch_league` should get the raw data and save the data cleaning afterwards
+
+### `Transform`
+
+The script should prepare the season's regular and playoffs stats so it can be fed directly to the model pipeline.
+
+Scope:
+
+- Remove players that do not meet the playtime threshold (to remove statistical noise)
+- Feature engineer new variables
+  - FG2M, FG2A
+- Remove extraneous columns
+  - \*\_PCT, FANATASY_PTS, FGM/A
+- Merge regular and playoffs stat via a weighting coefficient and games played
+  - Playoffs can be weighed at doubly as important as reg season
+  - How about the ranks?
+    - Concatenate as separate columns: `reg_rank` and `playoffs_rank`
+    - Never mind; remove and re-rank after stat folding.
+  - Minute played?
+    - Heavily dependent on injuries and playoff success
+    - Consider minutes per game
+    - How to reconcile mpg between reg/playoffs? Same idea as the coefficients: Given a player with 20 mpg in 82 regular season games, and 10 mpg in 12 playoff games, the merged mpg would be calculated as
+      $$\\text{mpg}\_{merge} = \\frac{20 * 82 + 2.0(10 * 12)}{82 + 2.0 * 12} = 18.1$$
+  - If no playoff minutes?
+    - Problem are the `*_RANK` fields. I dealt with this before by folding in the playoff stats into regular season - how do I fold ranks?
+    - Re-do ranking after folding in stats? This loses the granularity that comes with separating regular season and playoff ranks
+    - But I'm already doing that by folding the other numeric stats.
+
+## Storage
+
+Store locally for testing in `data/`, but eventually in a docker volume for portability, perhaps on S3

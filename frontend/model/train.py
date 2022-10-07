@@ -35,12 +35,6 @@ mlflow.set_experiment(MLFLOW_EXP_NAME)
 client = MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
 
 
-def load_data(data_path: Path) -> pd.DataFrame:
-    """Loads the data file from intermediate storage"""
-    df = pd.read_pickle(data_path)
-    return df
-
-
 def score_cluster(
     clusterer,
     data: pd.DataFrame,
@@ -281,7 +275,7 @@ def _run(data_path, max_evals, log_level):
 
     file_path = data_path / "nba_stats.pkl"
     logger.info(f"Loading data from: {file_path}")
-    df = load_data(file_path)
+    df = pd.read_pickle(file_path)
 
     logger.info(f"Logging all models in {max_evals} trials")
     model_search(data=df, num_trials=max_evals)
