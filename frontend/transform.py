@@ -88,8 +88,8 @@ DROP_STATS = [
     "TEAM_ID",
     "W",
     "L",
-    # "FGM",
-    # "FGA",
+    "FGM",
+    "FGA",
     "REB",
     "NBA_FANTASY_PTS",
     "DD2",
@@ -106,16 +106,22 @@ def feature_engineer(df: pd.DataFrame) -> pd.DataFrame:
     """Removes extraneous columns from leaguedash,
     and engineers some new features
     """
-    result = df.drop(DROP_COLS, axis=1)
+    result = df.copy()
     result["FG2M"] = result["FGM"] - result["FG3M"]
     result["FG2A"] = result["FGA"] - result["FG3A"]
 
+    result = result.drop(DROP_COLS, axis=1)
+    return result
 
-def reg_post_merge():
+
+def reg_post_merge(reg_df: pd.DataFrame, post_df: pd.DataFrame) -> pd.DataFrame:
     """Folds regular and post season stats into one via a weight coefficient"""
+    # if either regular or post stats for a given player is missing, use
+    # what's present
+    # only fold if both are present
 
 
-def player_meets_standard():
+def player_meets_standard(player: pd.Series) -> bool:
     """Does this player have >= 500 min or >= 40 games played?
     Considers the folded minutes/games played
     """
@@ -124,10 +130,15 @@ def player_meets_standard():
 def transform_leaguedash(reg_df: pd.DataFrame, post_df: pd.DataFrame) -> pd.DataFrame:
     """Prepares API results for clustering"""
     # feature engineer
+    reg_df = feature_engineer(reg_df)
+    post_df = feature_engineer(post_df)
 
     # merge
+    merge_df = reg_df.apply(lambda player: reg_post_merge(player), axis=1)
 
     # filter for minutes and games played
+    player_filter = merge_df.apply(player_meets_standard, axis=1)
+    return merge_df[player_filter]
 
 
 def dump_pickle(obj, fp: Path) -> None:
