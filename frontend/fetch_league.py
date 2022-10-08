@@ -84,13 +84,19 @@ def fetch_league_dash(
     """
     reg_path = data_path / f"leaguedash_regular_{season}.pkl"
     playoffs_path = data_path / f"leaguedash_playoffs_{season}.pkl"
-    logger.debug(f"File paths:\nRegular season: {reg_path}\nPlayoffs: {playoffs_path}")
+    logger.debug(
+        f"""
+        Saving to:
+        Regular season: {reg_path.resolve()}
+        Playoffs: {playoffs_path.resolve()}
+        """
+    )
 
     if not reg_path.exists():
         logger.info(f"Retrieving regular season dashboard for season {season}")
         regular = get_leaguedash_json("Regular Season", season)
         logger.debug(f"Num of records retrieved: {len(regular)}")
-        logger.info(f"Saving regular season results to:\n{reg_path}")
+        logger.info(f"Saving regular season results to:\n{reg_path.resolve()}")
         dump_pickle(regular, reg_path)
 
         # so we don't get blocked from API requests
@@ -104,7 +110,7 @@ def fetch_league_dash(
         logger.info(f"Retrieving playoff dashboard for {season}")
         playoffs = get_leaguedash_json("Playoffs", season)
         logger.debug(f"Num of records retrieved: {len(playoffs)}")
-        logger.info(f"Saving playoffs results to:\n{playoffs_path}")
+        logger.info(f"Saving playoffs results to:\n{playoffs_path.resolve()}")
         dump_pickle(playoffs, playoffs_path)
     else:
         logger.info(f"{playoffs_path.name} already exits; API not called")
