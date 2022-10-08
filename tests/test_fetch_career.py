@@ -1,10 +1,10 @@
 import json
 from pathlib import Path
 
-from nba_api.stats.endpoints import leaguedashplayerstats, playercareerstats
+from nba_api.stats.endpoints import playercareerstats
 from nba_api.stats.static import players
 
-from frontend import fetch_career, fetch_league
+from frontend import fetch_career
 
 
 def test_get_career_stats(monkeypatch):
@@ -181,25 +181,3 @@ def test_append_json(tmp_path):
         result = json.load(file)
 
     assert result["id2"] == test_dict["id"]
-
-
-def test_league_json(monkeypatch):
-    """Tests that a list is being returned"""
-
-    class MockLeagueDash:
-        @staticmethod
-        def get_normalized_json():
-            return '{"LeagueDashPlayerStats": ["a","b","c"]}'
-
-    def mock_league_dash(*args, **kwargs):
-        return MockLeagueDash()
-
-    monkeypatch.setattr(
-        leaguedashplayerstats, "LeagueDashPlayerStats", mock_league_dash
-    )
-
-    res = fetch_league.get_leaguedash_json("Regular Season", "2020-21", "Base")
-
-    assert res
-    assert isinstance(res, list)
-    assert len(res) == 3

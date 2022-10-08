@@ -31,8 +31,6 @@ def get_jsons(career_stats: dict) -> Tuple[dict, dict]:
     the regular and post season totals, for the most recent season"""
     logger = logging.getLogger("get_jsons")
     logger.debug(f"{career_stats}")
-    reg_season = []
-    post_season = []
     if career_stats["SeasonTotalsRegularSeason"]:
         reg_season = career_stats["SeasonTotalsRegularSeason"][-1]
 
