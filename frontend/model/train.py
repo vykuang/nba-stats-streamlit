@@ -15,7 +15,6 @@ from hyperopt import STATUS_OK, Trials, fmin, hp, tpe
 from hyperopt.pyll import scope
 from mlflow.entities import ViewType
 from mlflow.tracking import MlflowClient
-from nba_api.stats.static import players
 from sklearn import cluster
 from sklearn.decomposition import PCA
 from sklearn.metrics import (
@@ -27,8 +26,11 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "sqlite:///mlflow.db")
-MLFLOW_EXP_NAME = os.getenv("MLFLOW_EXP_NAME", "nba-player-cluster")
-MLFLOW_REGISTERED_MODEL = os.getenv("MLFLOW_REGISTERED_MODEL", "player-clusterer")
+MLFLOW_EXP_NAME = os.getenv("MLFLOW_EXP_NAME", "nba-leaguedash-cluster")
+MLFLOW_REGISTERED_MODEL = os.getenv("MLFLOW_REGISTERED_MODEL", "nba-player-clusterer")
+
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(sys.stdout)
 
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 mlflow.set_experiment(MLFLOW_EXP_NAME)
@@ -98,13 +100,6 @@ def model_search(data: pd.DataFrame, num_trials: int = 10) -> Trials:
     https://docs.databricks.com/applications/machine-learning/automl-hyperparam-tuning/hyperopt-model-selection.html
 
     """
-    logger = logging.getLogger("model_search")
-    logger.setLevel(logging.INFO)
-
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(logging.DEBUG)
-
-    logger.addHandler(handler)
 
     def objective(params):
         """Used in conjunction with hyperopt.fmin"""
@@ -208,7 +203,6 @@ def find_best_model() -> str:
         str
         Corresponds to the run_id of the best performing model
     """
-    logger = logging.getLogger("register_model")
     exp = client.get_experiment_by_name(MLFLOW_EXP_NAME)
     query = "metrics.n_labels >= 3"
     best_runs = client.search_runs(
@@ -230,7 +224,6 @@ def register_model(run_id: str):
     """
     ## register
     # /model comes from .log_model path
-    logger = logging.getLogger("register")
     model_uri = f"runs:/{run_id}/model"
     # model_vers contains meta_data of the registered model,
     # e.g. timestamps, source, tags, desc
@@ -258,27 +251,24 @@ def register_model(run_id: str):
     return latest_vers[-1]
 
 
-def _run(data_path, max_evals, log_level):
+def _run(data_path: Path, max_evals: int, season: str, loglevel: str):
     """Script to run the functions"""
-    num_log_level = getattr(logging, log_level, None)
+    num_loglevel = getattr(logging, loglevel, None)
 
-    if not isinstance(num_log_level, int):
-        raise ValueError(f"Invalid log level: {log_level}")
+    if not isinstance(num_loglevel, int):
+        raise ValueError(f"Invalid log level: {loglevel}")
 
-    logger = logging.getLogger("script")
-    logger.setLevel(num_log_level)
-
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(num_log_level)
+    logger.setLevel(num_loglevel)
+    handler.setLevel(num_loglevel)
 
     logger.addHandler(handler)
 
-    file_path = data_path / "nba_stats.pkl"
-    logger.info(f"Loading data from: {file_path}")
-    df = pd.read_pickle(file_path)
+    file_path = data_path / f"leaguedash_merge_{season}.pkl"
+    logger.info(f"Loading data from: {file_path.resolve()}")
+    df = pd.read_pickle(file_path.resolve())
 
     logger.info(f"Logging all models in {max_evals} trials")
-    model_search(data=df, num_trials=max_evals)
+    model_search(data=df.select_dtypes("number"), num_trials=max_evals)
 
     logger.info("Searching for best logged model")
     run_id = find_best_model()
@@ -287,15 +277,20 @@ def _run(data_path, max_evals, log_level):
     model_vers = register_model(run_id)
     logger.debug(f"{model_vers}")
 
+    logger.info("Retrieving model from MLflow")
+    model = retrieve()
+
+    logger.info("Revealing clusters")
+    groups = reveal_group(df, model)
+    print(groups)
+
 
 def retrieve() -> mlflow.pyfunc.PyFuncModel:
     """
     Retrieves and returns the latest version of the registered model
     """
-    logger = logging.getLogger("script")
-    logger.setLevel(logging.INFO)
-
-    model_filter = f"name={MLFLOW_REGISTERED_MODEL}"
+    # needs additional quotation marks around the filter value
+    model_filter = f"name='{MLFLOW_REGISTERED_MODEL}'"
     mv_search = client.search_model_versions(model_filter)
     logger.info(f"MLflow model versions returned: {len(mv_search)}")
 
@@ -326,19 +321,19 @@ def reveal_group(data_orig, model: mlflow.pyfunc.PyFuncModel):
     data["pts_ast_reb"] = np.sum([data.PTS, data.DREB, data.OREB, data.AST], axis=0)
 
     # creating player_map to get names from ID
-    players_active = players.get_active_players()
-    player_map = {player["id"]: player["full_name"] for player in players_active}
+    # players_active = players.get_active_players()
+    # player_map = {player["id"]: player["full_name"] for player in players_active}
 
-    data["full_name"] = [player_map[player_id] for player_id in list(data.index)]
+    # data["full_name"] = [player_map[player_id] for player_id in list(data.index)]
     df_sort = data.groupby("label_pred").apply(
         lambda x: x.sort_values(["pts_ast_reb"], ascending=False)
     )
     df_samp = []
     for label in np.unique(label_preds):
-        label_samples = df_sort.loc[[label], "full_name"].head(5)
+        label_samples = df_sort.loc[[label], "PLAYER_NAME"].head(5)
         df_samp.append(label_samples)
 
-    df_merge = pd.concat(df_samp, axis=0).loc[:, ["full_name", "label_pred"]]
+    df_merge = pd.concat(df_samp, axis=0).loc[:, ["PLAYER_NAME", "label_pred"]]
     df_merge.to_csv("./player_labels_sample.csv")
     return df_merge
 
@@ -350,16 +345,22 @@ if __name__ == "__main__":
         "--data_path",
         type=Path,
         default="../../data/",
-        help="the location where the processed nba career data was saved.",
+        help="location where the processed nba career data was saved.",
     )
     parser.add_argument(
         "--max_evals",
         type=int,
         default=10,
-        help="the number of parameter evaluations for the optimizer to explore.",
+        help="number of parameter evaluations for the optimizer to explore.",
     )
     parser.add_argument(
-        "--log",
+        "--season",
+        type=str,
+        default="2018-19",
+        help="Season to train our clusterer, e.g. 2018-19.",
+    )
+    parser.add_argument(
+        "--loglevel",
         "-l",
         type=str.upper,
         default="info",
@@ -367,4 +368,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    _run(args.data_path, args.max_evals, args.log)
+    _run(args.data_path, args.max_evals, args.season, args.loglevel)

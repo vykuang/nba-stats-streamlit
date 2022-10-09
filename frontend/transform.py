@@ -83,6 +83,7 @@ ALL_COLS = [
     "CFPARAMS",
 ]
 
+PLAYER_BIO = set(["PLAYER_NAME", "TEAM_ABBREVIATION", "AGE"])
 MERGE_STATS = [
     "GP",
     "MIN",
@@ -147,7 +148,6 @@ def transform_leaguedash(
     logger.info("feature engineering complete")
 
     post_ids = set(post_df.index)
-    non_merge = set(["PLAYER_NAME", "TEAM_ABBREVIATION", "AGE"])
     # merge
     def reg_post_merge(player: pd.Series, post_wt: float = 2.0) -> pd.Series:
         """Folds regular and post season stats into one via a weight coefficient"""
@@ -164,7 +164,7 @@ def transform_leaguedash(
 
         gp_tot = player["GP"] + post_wt * post_season["GP"]
         for stat in player.index:
-            if stat not in non_merge:
+            if stat not in PLAYER_BIO:
                 player[stat + "_merge"] = (
                     player["GP"] / gp_tot * player[stat]
                     + post_wt * post_season["GP"] / gp_tot * post_season[stat]
@@ -172,9 +172,60 @@ def transform_leaguedash(
         return player
 
     logger.debug("Merging regular and post season stats...")
-    merge_df = reg_df.apply(reg_post_merge, post_wt=post_wt, axis=1)
+    # drop reg season stats after merging with post season
+    merge_df = reg_df.apply(reg_post_merge, post_wt=post_wt, axis=1).drop(
+        MERGE_STATS, axis=1
+    )
     logger.info(f"Merging complete with post_wt = {post_wt:.3f}")
     logger.debug(f"Players post merge: {len(merge_df)}")
+
+    # re-rank using merged stats
+    def leaguedash_rerank(stat: pd.Series) -> pd.Series:
+        """Ranks all the values in the given stat column.
+        Largest values will be given top ranks
+        To be used in df.apply()
+
+        Parameters
+        ---------
+
+        stat: pd.Series
+            A statistical field with numeric values to be ranked
+
+        Returns
+        --------
+
+        stat_rank: pd.Series
+            Ranking of the stat Series
+        """
+
+        # sort the values
+        sorted_stat_index = stat.sort_values(ascending=False).index
+
+        # attach a sequential index to the now sorted values
+        sorted_rank = [rank + 1 for rank in range(len(stat.index))]
+
+        # can't for the life of me figure out how to return my desired column names
+        rank_series = pd.Series(
+            data=sorted_rank,
+            index=sorted_stat_index,
+            name=f"{stat.name}_RANK",
+        ).reindex(index=stat.index)
+        return rank_series
+
+    logger.debug("Re-ranking merged stats...")
+    # only rank merged columns, so drop bio before merging
+    merge_ranks = merge_df.drop(PLAYER_BIO, axis=1).apply(
+        leaguedash_rerank, axis="index"
+    )
+    merge_ranks.columns = [col.replace("merge", "RANK") for col in merge_ranks.columns]
+    logger.info("Re-rank complete")
+
+    logger.debug(
+        f"merge_df shape: {merge_df.shape}\nmerge_rank shape: {merge_ranks.shape}"
+    )
+    merge_df = pd.concat([merge_df, merge_ranks], axis="columns")
+    logger.info("Ranks and stats merge complete")
+    logger.debug(f"Column count: {len(merge_df.columns)}")
 
     # filter for minutes and games played
     def player_meets_standard(
@@ -187,6 +238,7 @@ def transform_leaguedash(
 
     player_filter = merge_df.apply(player_meets_standard, axis=1)
     logger.info(f"Number of eligible players: {player_filter.sum()}")
+
     return merge_df[player_filter]
 
 
@@ -208,7 +260,7 @@ def load_pickle(fp: Path) -> Any:
         raise TypeError("Expected list of dicts")
 
 
-def transform(season: str, data_path: Path, loglevel: str):
+def transform(season: str, data_path: Path, loglevel: str, overwrite: bool = False):
     """Loads the pickle for transformation, and stores the result"""
     numeric_level = getattr(logging, loglevel.upper(), None)
     if not isinstance(numeric_level, int):
@@ -219,14 +271,15 @@ def transform(season: str, data_path: Path, loglevel: str):
 
     reg_pkl = data_path / f"leaguedash_regular_{season}.pkl"
     post_pkl = data_path / f"leaguedash_playoffs_{season}.pkl"
-    merge_pkl = data_path / f"leagedash_merge_{season}.pkl"
-    if merge_pkl.exists():
+    merge_pkl = data_path / f"leaguedash_merge_{season}.pkl"
+    if merge_pkl.exists() and not overwrite:
         logger.info(
             f"""
             Merged pickle already exists at:
             {merge_pkl.resolve()}
             Exiting
-            """)
+            """
+        )
         return True
 
     logger.info(f"Loading from {data_path.resolve()}")
@@ -264,6 +317,12 @@ if __name__ == "__main__":
         type=str.upper,
         default="INFO",
     )
-
+    parser.add_argument(
+        "--overwrite",
+        "-o",
+        type=bool,
+        default=False,
+        help="If True, overwrite existing transform result pickle",
+    )
     args = parser.parse_args()
-    transform(args.season, args.data_path, args.loglevel)
+    transform(args.season, args.data_path, args.loglevel, args.overwrite)
