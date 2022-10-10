@@ -202,14 +202,18 @@ def transform_leaguedash(
         sorted_stat_index = stat.sort_values(ascending=False).index
 
         # attach a sequential index to the now sorted values
-        sorted_rank = [rank + 1 for rank in range(len(stat.index))]
+        sorted_rank = [(rank + 1) for rank in range(len(stat.index))]
 
         # can't for the life of me figure out how to return my desired column names
+        # rename after returning.
         rank_series = pd.Series(
             data=sorted_rank,
             index=sorted_stat_index,
             name=f"{stat.name}_RANK",
         ).reindex(index=stat.index)
+
+        # standardize by dividing by num of players
+        rank_series /= len(stat)
         return rank_series
 
     logger.debug("Re-ranking merged stats...")
@@ -236,10 +240,10 @@ def transform_leaguedash(
         """
         return player["MIN_merge"] >= min_thd or player["GP_merge"] >= gp_thd
 
-    player_filter = merge_df.apply(player_meets_standard, axis=1)
-    logger.info(f"Number of eligible players: {player_filter.sum()}")
+    merge_df["gametime_threshold"] = merge_df.apply(player_meets_standard, axis=1)
+    logger.info(f"Number of eligible players: {merge_df['gametime_threshold'].sum()}")
 
-    return merge_df[player_filter]
+    return merge_df
 
 
 def dump_pickle(obj, fp: Path) -> None:

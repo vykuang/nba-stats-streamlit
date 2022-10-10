@@ -7,6 +7,7 @@ import logging
 import os
 import sys
 from pathlib import Path
+from typing import Tuple
 
 import mlflow
 import numpy as np
@@ -281,7 +282,7 @@ def _run(data_path: Path, max_evals: int, season: str, loglevel: str):
     model = retrieve()
 
     logger.info("Revealing clusters")
-    groups = reveal_group(df, model)
+    groups, _ = reveal_group(df, model)
     print(groups)
 
 
@@ -303,7 +304,7 @@ def retrieve() -> mlflow.pyfunc.PyFuncModel:
         # the models:/model_name/Production uri is only useable if MLflow server is up
         model = mlflow.pyfunc.load_model(
             # model_uri=f'models:/{MLFLOW_REGISTERED_MODEL}/Production'
-            model_uri=model_uris[0]
+            model_uri=model_uris[-1]
         )
         return model
     else:
@@ -311,31 +312,47 @@ def retrieve() -> mlflow.pyfunc.PyFuncModel:
         raise Exception("No model found in production stage")
 
 
-def reveal_group(data_orig, model: mlflow.pyfunc.PyFuncModel):
+def reveal_group(
+    data, model: mlflow.pyfunc.PyFuncModel, labels: dict = None
+) -> Tuple[dict, pd.DataFrame]:
     """
     Use a logged model to visualize what label's what
     """
-    data = data_orig.copy()
-    label_preds = model.predict(data)
+    data = data.copy()
+    label_preds = model.predict(data.drop(["PLAYER_NAME", "TEAM_ABBREVIATION"], axis=1))
     data["label_pred"] = label_preds
-    data["pts_ast_reb"] = np.sum([data.PTS, data.DREB, data.OREB, data.AST], axis=0)
-
-    # creating player_map to get names from ID
-    # players_active = players.get_active_players()
-    # player_map = {player["id"]: player["full_name"] for player in players_active}
-
-    # data["full_name"] = [player_map[player_id] for player_id in list(data.index)]
-    df_sort = data.groupby("label_pred").apply(
-        lambda x: x.sort_values(["pts_ast_reb"], ascending=False)
+    # min to incentivize recognizability
+    # plus_minus for substance
+    data["rank_agg"] = np.sum(
+        [
+            # data.PTS_RANK,
+            # data.DREB_RANK,
+            # data.OREB_RANK,
+            # data.AST_RANK,
+            data.MIN_RANK,
+            data.PLUS_MINUS_RANK,
+        ],
+        axis=0,
     )
-    df_samp = []
-    for label in np.unique(label_preds):
-        label_samples = df_sort.loc[[label], "PLAYER_NAME"].head(5)
-        df_samp.append(label_samples)
+    # print(data.columns)
 
-    df_merge = pd.concat(df_samp, axis=0).loc[:, ["PLAYER_NAME", "label_pred"]]
-    df_merge.to_csv("./player_labels_sample.csv")
-    return df_merge
+    df_sort = data.groupby("label_pred").apply(
+        lambda x: x.sort_values(["rank_agg"], ascending=True)
+    )
+    # df_samp = []
+    if not labels:
+        labels = {}
+        for label in np.unique(label_preds):
+            label_samples = df_sort.loc[[label], "PLAYER_NAME"].head(10).sample(3)
+            # print(label_samples)
+            # df_samp.append(label_samples)
+            labels[label] = "-".join(label_samples.values)
+
+    data["label_names"] = data["label_pred"].map(labels)
+    # df_merge = pd.concat(df_samp, axis=0)
+    # if export_csv:
+    #     df_merge.to_csv("./player_labels_sample.csv")
+    return labels, data.drop(["rank_agg"], axis=1)
 
 
 if __name__ == "__main__":
