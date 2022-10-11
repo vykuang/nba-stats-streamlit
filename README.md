@@ -38,9 +38,15 @@ Streamlit will act is the frontend interface that the end-user interacts with.
     * player season,
     * comparison season
 * Streamlit will have a visualization template for the season stats, and how they might differ or overlap with each other
-    * Distributions of key stats across the seasons, e.g. PTS, 3GA
+    * Distributions of key stats across the seasons, e.g. PTS, 3GA via violion plots
     * Run the pre-trained model to find similar players based on user input
-    * Visualize contrast the player comps on a scatterplot
+    * Visualize and contrast the player comps on a scatterplot
+        * Include the label's top players in the comparison scatterplot
+    * Bar graph to view comparisons of individual stat of:
+        * selected player
+        * similar player
+        * lowest and top ranked player from both current and comparison season?
+* [optional] Add toggle to select comparison stat. Perhaps we only want PFD (personal fouls drawn), FTM, FTA
 ```
 
 ## How do we get there?
@@ -56,3 +62,5 @@ Streamlit will require:
 ### Deciding player similarity
 
 The stat ranks will play a large part in determining the similarity, but only after the label is revealed by the model. After that we could feature-engineer some kind of aggregate ranking to be applied intra-label, and then pick players from the comparison season adjacent to the selected player's rank in the current season
+
+`PLUS_MINUS_RANK` and `MIN_RANK` to be used for aggregate ranking, emphasizing player impact and in-game time.

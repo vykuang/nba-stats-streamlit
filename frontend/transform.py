@@ -235,7 +235,7 @@ def transform_leaguedash(
     def player_meets_standard(
         player: pd.Series, min_thd: int = 800, gp_thd: int = 40
     ) -> bool:
-        """Does this player have >= 500 min or >= 40 games played?
+        """Does this player pass the minutes or games played threshold?
         Considers the folded minutes/games played
         """
         return player["MIN_merge"] >= min_thd or player["GP_merge"] >= gp_thd

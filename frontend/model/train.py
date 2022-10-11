@@ -7,7 +7,6 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Tuple
 
 import mlflow
 import numpy as np
@@ -252,7 +251,12 @@ def register_model(run_id: str):
     return latest_vers[-1]
 
 
-def _run(data_path: Path, max_evals: int, season: str, loglevel: str):
+def _run(
+    data_path: Path,
+    max_evals: int,
+    season: str,
+    loglevel: str = "INFO",
+):
     """Script to run the functions"""
     num_loglevel = getattr(logging, loglevel, None)
 
@@ -277,82 +281,6 @@ def _run(data_path: Path, max_evals: int, season: str, loglevel: str):
     logger.info("Registering model")
     model_vers = register_model(run_id)
     logger.debug(f"{model_vers}")
-
-    logger.info("Retrieving model from MLflow")
-    model = retrieve()
-
-    logger.info("Revealing clusters")
-    groups, _ = reveal_group(df, model)
-    print(groups)
-
-
-def retrieve() -> mlflow.pyfunc.PyFuncModel:
-    """
-    Retrieves and returns the latest version of the registered model
-    """
-    # needs additional quotation marks around the filter value
-    model_filter = f"name='{MLFLOW_REGISTERED_MODEL}'"
-    mv_search = client.search_model_versions(model_filter)
-    logger.info(f"MLflow model versions returned: {len(mv_search)}")
-
-    model_uris = [mv.source for mv in mv_search if mv.current_stage == "Production"]
-
-    if model_uris:
-        logger.info(f"selected model URI: {model_uris[-1]}")
-        # alternatively model_uri could also be direct path to s3 bucket:
-        # s3://{MLFLOW_ARTIFACT_STORE}/<exp_id>/<run_id>/artifacts/models
-        # the models:/model_name/Production uri is only useable if MLflow server is up
-        model = mlflow.pyfunc.load_model(
-            # model_uri=f'models:/{MLFLOW_REGISTERED_MODEL}/Production'
-            model_uri=model_uris[-1]
-        )
-        return model
-    else:
-        logger.critical("No production stage model found")
-        raise Exception("No model found in production stage")
-
-
-def reveal_group(
-    data, model: mlflow.pyfunc.PyFuncModel, labels: dict = None
-) -> Tuple[dict, pd.DataFrame]:
-    """
-    Use a logged model to visualize what label's what
-    """
-    data = data.copy()
-    label_preds = model.predict(data.drop(["PLAYER_NAME", "TEAM_ABBREVIATION"], axis=1))
-    data["label_pred"] = label_preds
-    # min to incentivize recognizability
-    # plus_minus for substance
-    data["rank_agg"] = np.sum(
-        [
-            # data.PTS_RANK,
-            # data.DREB_RANK,
-            # data.OREB_RANK,
-            # data.AST_RANK,
-            data.MIN_RANK,
-            data.PLUS_MINUS_RANK,
-        ],
-        axis=0,
-    )
-    # print(data.columns)
-
-    df_sort = data.groupby("label_pred").apply(
-        lambda x: x.sort_values(["rank_agg"], ascending=True)
-    )
-    # df_samp = []
-    if not labels:
-        labels = {}
-        for label in np.unique(label_preds):
-            label_samples = df_sort.loc[[label], "PLAYER_NAME"].head(10).sample(3)
-            # print(label_samples)
-            # df_samp.append(label_samples)
-            labels[label] = "-".join(label_samples.values)
-
-    data["label_names"] = data["label_pred"].map(labels)
-    # df_merge = pd.concat(df_samp, axis=0)
-    # if export_csv:
-    #     df_merge.to_csv("./player_labels_sample.csv")
-    return labels, data.drop(["rank_agg"], axis=1)
 
 
 if __name__ == "__main__":
@@ -385,4 +313,9 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    _run(args.data_path, args.max_evals, args.season, args.loglevel)
+    _run(
+        args.data_path,
+        args.max_evals,
+        args.season,
+        args.loglevel,
+    )

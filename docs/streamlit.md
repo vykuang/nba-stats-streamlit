@@ -32,6 +32,14 @@ What do I want to show? Ultimately I'd like an interactive applet that lets the 
 
 ## Execution
 
+### Altair
+
+Altair seems fairly intuitive to use. Similar to R's ggplot in some regards.
+
+No easy way to violinplot? Need to use `.transform_density()` method which creates the histogram, and then re-orient it vertically and fill colors
+
+Also, what can I do about the label names? Chaining the top three players as a singular label seems clunky, but hard to give context for those labels otherwise. Maybe I can limit the length of names chosen for these labels.
+
 ## Hurdles
 
 Some challenges faced over the course of this project
@@ -48,5 +56,15 @@ Not satisfied with the workflow, I dug around the endpoints and found `leaguedas
 1. One call for the whole season
 
 The ease of acquiring data from other seasons makes it feasible to start comparing players across eras
+
+### Project layout
+
+If I want to reuse code in my streamlit app, I run into the recurring issue of trying relative imports with no known parent package, since streamlit calls them as `__main__`. Need to rethink how to organize my code. Currently some repetitions between `train.py` and the `streamlit.py` app when it comes to `retrieve` and `reveal_group`. Perhaps I should keep `train.py` to do what the name suggests, and move out those latter two functions.
+
+### Visualization
+
+- Looking for an array of violin plots for season's distribution of stats
+- Toggle between seasons
+- Array of *bar graphs* displaying the selected player, similar players, and top/bottom players for each stat
 
 ## Docker
