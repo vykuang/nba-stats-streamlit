@@ -58,6 +58,18 @@ client = MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
 
 st.title("NBA Player Comparisons across Eras")
 
+# ----------------------------------------------------------------------------
+# USER INPUT
+# ----------------------------------------------------------------------------
+
+season_a_input = "2018-19"
+season_b_input = "2004-05"
+player_name_input = "Fred VanVleet"
+
+# ----------------------------------------------------------------------------
+# Loading data based on input
+# ----------------------------------------------------------------------------
+
 
 @st.cache
 def load_career_stats(season: str, data_path: Path = "../../data/"):
@@ -66,10 +78,17 @@ def load_career_stats(season: str, data_path: Path = "../../data/"):
     return data
 
 
+player_season = load_career_stats(season=season_a_input)
+comparison = load_career_stats(season=season_b_input)
+
+# combine the two seasons and add 'season' as new feature
+# consider appending it in preprocess?
+player_season["season"] = player_season.apply(lambda x: season_a_input, axis=1)
+comparison["season"] = comparison.apply(lambda x: season_b_input, axis=1)
+src = pd.concat([player_season, comparison], axis=0)
+
 logger.debug("Loading data")
 data_load_state = st.text("Loading pickle...")
-player_season = load_career_stats(season="2018-19")
-comparison = load_career_stats(season="2004-05")
 logger.info("Loaded data")
 
 
@@ -168,17 +187,42 @@ def make_ast_reb_scatter(stats, gametime_threshold: bool = True):
     """Wrapper to make the EDA scatter plot for different seasons"""
     if gametime_threshold:
         stats = stats.loc[stats["gametime_threshold"]]
-    alt_chart = (
+    brush = alt.selection(type="interval")
+
+    base = (
         alt.Chart(stats)
-        .mark_circle()
+        .mark_point()
         .encode(
             x="AST_merge",
-            y="DREB_merge",
-            size="PTS_merge",
-            color="PLUS_MINUS_merge",
+            y="BLK_merge",
+            size="PLUS_MINUS_merge",
+            color=alt.condition(brush, "PTS_merge:Q", alt.value("grey")),
             tooltip=["PLAYER_NAME"],
         )
+        .add_selection(brush)
     )
+
+    ranked_text = (
+        alt.Chart(src)
+        .mark_text()
+        .encode(y=alt.Y("row_number:O", axis=None))
+        .transform_window(row_number="row_number()")
+        .transform_filter(brush)
+        .transform_window(rank="rank(row_number)")
+        .transform_filter(alt.datum.rank < 20)
+    )
+
+    # encoding our data table onto the base
+    player_name = ranked_text.encode(text="PLAYER_NAME:N").properties(title="Name")
+    team = ranked_text.encode(text="TEAM_ABBREVIATION:N").properties(title="Team")
+    pts = ranked_text.encode(text="PTS_merge:Q").properties(title="Points")
+    text = alt.hconcat(player_name, team, pts)
+
+    # build chart
+    alt_chart = alt.hconcat(
+        base,
+        text,
+    ).resolve_legend(color="independent")
     return alt_chart
 
 
@@ -189,27 +233,42 @@ st.altair_chart(comp_scatter)
 
 st.subheader("STAT DISTRIBUTION")
 # compares the distribution of each stat between the two seasons
-merge_stats = [stat for stat in player_season.columns if "_merge" in stat]
 
 
-def make_violin(stat: pd.DataFrame, name: str, gametime_threshold: bool = True):
+def make_violin(df: pd.DataFrame, var: str, gametime_threshold: bool = True):
     """Wrapper to return altair violinplot via chart().transform_density()
-    'name:Q' or 'name:N' is a shorthand to encode the datatypes for altair
-    Q - quantitatve, N - nominal
+
+    Parameters:
+    -----------
+
+    df: dataframe, wide-format
+        Record of all players from the two seasons, must include
+        these features:
+        - gametime_threshold
+        - label_names
+        - <stat>_merge variables
+
+    var: str
+        column name for which the values will be density transformed
+
+    Returns:
+    ---------
+
+    violin: alt.Chart() object
     """
     if gametime_threshold:
-        stat = stat.loc[stat["gametime_threshold"]]
+        df = df.loc[df["gametime_threshold"]]
     violin = (
-        alt.Chart(stat)
+        alt.Chart(df)
         .transform_density(
-            name,
-            as_=[name, "density"],
-            extent=[stat[name].min(), stat[name].max()],
+            var,
+            as_=[var, "density"],
+            extent=[df[var].min(), df[var].max()],
             groupby=["label_names"],
         )
         .mark_area(orient="horizontal")
         .encode(
-            y=f"{name}:Q",
+            y=f"{var}:Q",
             color="label_names:N",
             x=alt.X(
                 "density:Q",
@@ -230,12 +289,30 @@ def make_violin(stat: pd.DataFrame, name: str, gametime_threshold: bool = True):
             ),
         )
         .properties(width=100)
-        .configure_facet(spacing=0)
-        .configure_view(stroke=None)
     )
 
     return violin
 
 
-player_season_pts = make_violin(player_season, "PTS_merge")
-st.altair_chart(player_season_pts)
+merge_stats = [stat for stat in player_season.columns if "_merge" in stat]
+violins = {stat: make_violin(df=src, var=stat) for stat in merge_stats}
+
+base_violin = alt.vconcat()
+while violins:
+    rows = alt.hconcat()
+    for _ in range(4):
+        if violins:
+            rows |= violins.popitem()[1]
+    base_violin &= rows
+
+# player_season_pts = make_violin(player_season, "PTS_merge")
+st.altair_chart(base_violin)
+
+# ----------------------------------------------------------------------------
+# User chooses the player for season comparison here
+# App uses the pre-trained model to return three similar players
+# and visualizes the comparison in a series of bar graphs
+# ----------------------------------------------------------------------------
+
+
+# combine
