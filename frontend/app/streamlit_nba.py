@@ -13,8 +13,9 @@ import altair as alt
 import mlflow
 import numpy as np
 import pandas as pd
-import streamlit as st
 from mlflow.tracking import MlflowClient
+
+import streamlit as st
 
 parser = argparse.ArgumentParser(
     description="Streamlit app to compare NBA players and seasons"
@@ -55,6 +56,8 @@ MLFLOW_REGISTERED_MODEL = os.getenv("MLFLOW_REGISTERED_MODEL", "nba-player-clust
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 mlflow.set_experiment(MLFLOW_EXP_NAME)
 client = MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
+
+alt.data_transformers.enable("json")
 
 st.title("NBA Player Comparisons across Eras")
 
@@ -154,7 +157,7 @@ def reveal_group(
         for label in np.unique(label_preds):
             label_samples = df_sort.loc[[label], "PLAYER_NAME"].head(10).sample(3)
             label_name = ""
-            while len(label_name) > 50 or not label_name:
+            while len(label_name) > 55 or not label_name:
                 label_name = "-".join(label_samples.sample(3).values)
             labels[label] = label_name
 
@@ -183,6 +186,7 @@ st.subheader("EDA")
 st.subheader("AST AND REB VS PTS DISTRIBUTION")
 
 
+@st.cache
 def make_ast_reb_scatter(stats, gametime_threshold: bool = True):
     """Wrapper to make the EDA scatter plot for different seasons"""
     if gametime_threshold:
@@ -235,6 +239,7 @@ st.subheader("STAT DISTRIBUTION")
 # compares the distribution of each stat between the two seasons
 
 
+@st.cache
 def make_violin(df: pd.DataFrame, var: str, gametime_threshold: bool = True):
     """Wrapper to return altair violinplot via chart().transform_density()
 
@@ -264,12 +269,12 @@ def make_violin(df: pd.DataFrame, var: str, gametime_threshold: bool = True):
             var,
             as_=[var, "density"],
             extent=[df[var].min(), df[var].max()],
-            groupby=["label_names"],
+            groupby=["season"],
         )
         .mark_area(orient="horizontal")
         .encode(
             y=f"{var}:Q",
-            color="label_names:N",
+            color="season:N",
             x=alt.X(
                 "density:Q",
                 stack="center",
@@ -278,13 +283,14 @@ def make_violin(df: pd.DataFrame, var: str, gametime_threshold: bool = True):
                 axis=alt.Axis(labels=False, values=[0], grid=False, ticks=False),
             ),
             column=alt.Column(
-                "label_names:N",
+                "season:N",
                 header=alt.Header(
-                    titleOrient="bottom",
-                    labelAnchor="end",
-                    labelOrient="bottom",
-                    labelAngle=-30,
-                    labelPadding=0,
+                    title=None,
+                    # titleOrient="bottom",
+                    # labelAnchor="end",
+                    # labelOrient="bottom",
+                    # labelAngle=-30,
+                    # labelPadding=0,
                 ),
             ),
         )
@@ -297,7 +303,7 @@ def make_violin(df: pd.DataFrame, var: str, gametime_threshold: bool = True):
 merge_stats = [stat for stat in player_season.columns if "_merge" in stat]
 violins = {stat: make_violin(df=src, var=stat) for stat in merge_stats}
 
-base_violin = alt.vconcat()
+base_violin = alt.vconcat(title="Traditional Stat Distribution between Seasons")
 while violins:
     rows = alt.hconcat()
     for _ in range(4):
@@ -305,6 +311,13 @@ while violins:
             rows |= violins.popitem()[1]
     base_violin &= rows
 
+base_violin.configure_legend(
+    strokeColor="gray",
+    fillColor="#EEEEEE",
+    padding=10,
+    cornerRadius=5,
+    orient="top-right",
+)
 # player_season_pts = make_violin(player_season, "PTS_merge")
 st.altair_chart(base_violin)
 
@@ -313,6 +326,65 @@ st.altair_chart(base_violin)
 # App uses the pre-trained model to return three similar players
 # and visualizes the comparison in a series of bar graphs
 # ----------------------------------------------------------------------------
+st.subheader(f"{player_name_input} Player Comparisons")
+
+# create comparison column to sort "similarity"
+# across season, we look not to indiv. stats, but to overall
+# impact and playtime
+src["comparison_rank"] = src["PLUS_MINUS_RANK"] + src["MIN_RANK"]
+player_stat = src.loc[src["PLAYER_NAME"] == player_name_input]
+# returns a pd.Series of len 1
+player_label = player_stat["label_pred"].values[0]
+
+comparison_pool = src[
+    (src["season"] == season_b_input)
+    & (src["label_pred"] == player_label)
+    & (src["gametime_threshold"])
+]
+
+similarity_index = (
+    (comparison_pool["comparison_rank"] - player_stat["comp_rank"].values)
+    .abs()
+    .sort_values(ascending=True)
+    .index
+)
+similarity_rank = comparison_pool.loc[similarity_index]
 
 
-# combine
+def get_stat_ends(bar_stat: str, comparison_pool: pd.DataFrame):
+    bar_ranked = comparison_pool[bar_stat].sort_values(ascending=False).index
+    top = comparison_pool.loc[bar_ranked].head(1)
+    bot = comparison_pool.loc[bar_ranked].tail(1)
+    return top, bot
+
+
+def make_stat_bar(bar_stat: str, df_stat):
+    stat_bar = (
+        alt.Chart(df_stat)
+        .mark_bar(width=30)
+        .encode(
+            y=f"{bar_stat}:Q",
+            x=alt.X(
+                "PLAYER_NAME:N",
+                # sort=df_stat.sort_values(by=bar_stat)['PLAYER_NAME'].values,
+                # sort='ascending', # sorts X-axis string vals
+                sort="y",
+                axis=alt.Axis(
+                    labels=True,
+                    title="PLAYER NAME",
+                    labelAngle=-30,
+                ),
+            ),
+            color=f"selected_player:N",
+        )
+        .properties(width=300)
+    )
+    return stat_bar
+
+
+# this will be looped to cover all the stats in `merge_stats`
+# top, bot = get_stat_ends(bar_stat=bar_stat, comparison_pool=comparison_pool)
+# df_stat = pd.concat([player_stat, similarity_rank.head(2), top, bot], axis=0)
+# df_stat["selected_player"] = df_stat.apply(
+#     lambda x: x["PLAYER_NAME"] == player_name_input, axis=1
+# )
