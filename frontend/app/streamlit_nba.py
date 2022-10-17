@@ -33,7 +33,7 @@ except SystemExit as e:
     # This exception will be raised if --help or invalid command line arguments
     # are used. Currently streamlit prevents the program from exiting normally
     # so we have to do a hard exit.
-    os._exit(e.code)
+    os._exit(e.code)  # pylint: disable=protected-access
 
 num_loglevel = getattr(logging, args.loglevel, None)
 
@@ -45,7 +45,11 @@ logger.setLevel(num_loglevel)
 handler.setLevel(num_loglevel)
 logger.addHandler(handler)
 
+CHART_WIDTH = 300
+
+# THIS IS A MAGIC CONSTANT AND MUST BE RESOLVED AT DEPLOYMENT
 REL_PATH = "../model"
+
 MLFLOW_TRACKING_URI = os.getenv(
     "MLFLOW_TRACKING_URI", f"sqlite:///{REL_PATH}/mlflow.db"
 )
@@ -74,7 +78,7 @@ player_name_input = "Fred VanVleet"
 # ----------------------------------------------------------------------------
 
 
-@st.cache
+# @st.cache
 def load_career_stats(season: str, data_path: Path = "../../data/"):
     file_path = Path(data_path) / f"leaguedash_merge_{season}.pkl"
     data = pd.read_pickle(file_path)
@@ -88,7 +92,6 @@ comparison = load_career_stats(season=season_b_input)
 # consider appending it in preprocess?
 player_season["season"] = player_season.apply(lambda x: season_a_input, axis=1)
 comparison["season"] = comparison.apply(lambda x: season_b_input, axis=1)
-src = pd.concat([player_season, comparison], axis=0)
 
 logger.debug("Loading data")
 data_load_state = st.text("Loading pickle...")
@@ -96,12 +99,12 @@ logger.info("Loaded data")
 
 
 @st.cache
-def retrieve() -> mlflow.pyfunc.PyFuncModel:
+def retrieve(model_name: str) -> mlflow.pyfunc.PyFuncModel:
     """
     Retrieves and returns the latest version of the registered model
     """
     # needs additional quotation marks around the filter value
-    model_filter = f"name='{MLFLOW_REGISTERED_MODEL}'"
+    model_filter = f"name='{model_name}'"
     mv_search = client.search_model_versions(model_filter)
     logger.info(f"MLflow model versions returned: {len(mv_search)}")
 
@@ -165,9 +168,13 @@ def reveal_group(
     return labels, data.drop(["rank_agg"], axis=1)
 
 
-clusterer = retrieve()
+logger.info("Retrieving trained clusterer")
+clusterer = retrieve(MLFLOW_REGISTERED_MODEL)
+
+logger.info("Predicting player label for season A")
 cluster_labels, player_season = reveal_group(player_season, clusterer)
-_, comparison = reveal_group(comparison, clusterer, labels=cluster_labels)
+logger.info("Predicting player label for season B")
+comparison = reveal_group(comparison, clusterer, labels=cluster_labels)[1]
 
 data_load_state = st.text("Finished loading")
 
@@ -183,10 +190,10 @@ if st.checkbox("Show comparison season stats"):
 st.subheader("EDA")
 
 
-st.subheader("AST AND REB VS PTS DISTRIBUTION")
+st.subheader("AST AND BLK VS PTS DISTRIBUTION")
 
 
-@st.cache
+# @st.cache
 def make_ast_reb_scatter(stats, gametime_threshold: bool = True):
     """Wrapper to make the EDA scatter plot for different seasons"""
     if gametime_threshold:
@@ -207,7 +214,7 @@ def make_ast_reb_scatter(stats, gametime_threshold: bool = True):
     )
 
     ranked_text = (
-        alt.Chart(src)
+        alt.Chart(stats)
         .mark_text()
         .encode(y=alt.Y("row_number:O", axis=None))
         .transform_window(row_number="row_number()")
@@ -230,8 +237,13 @@ def make_ast_reb_scatter(stats, gametime_threshold: bool = True):
     return alt_chart
 
 
+logger.info("Preparing scatterplot for season A")
 player_season_scatter = make_ast_reb_scatter(player_season)
+
+logger.info("Preparing scatterplot for season B")
 comp_scatter = make_ast_reb_scatter(comparison)
+
+logger.debug("Rendering charts in streamlit")
 st.altair_chart(player_season_scatter)
 st.altair_chart(comp_scatter)
 
@@ -239,7 +251,7 @@ st.subheader("STAT DISTRIBUTION")
 # compares the distribution of each stat between the two seasons
 
 
-@st.cache
+# @st.cache
 def make_violin(df: pd.DataFrame, var: str, gametime_threshold: bool = True):
     """Wrapper to return altair violinplot via chart().transform_density()
 
@@ -264,7 +276,7 @@ def make_violin(df: pd.DataFrame, var: str, gametime_threshold: bool = True):
     if gametime_threshold:
         df = df.loc[df["gametime_threshold"]]
     violin = (
-        alt.Chart(df)
+        alt.Chart(df, title=var.replace("_merge", ""))
         .transform_density(
             var,
             as_=[var, "density"],
@@ -273,7 +285,10 @@ def make_violin(df: pd.DataFrame, var: str, gametime_threshold: bool = True):
         )
         .mark_area(orient="horizontal")
         .encode(
-            y=f"{var}:Q",
+            y=alt.Y(
+                f"{var}:Q",
+                axis=alt.Axis(title=None),
+            ),
             color="season:N",
             x=alt.X(
                 "density:Q",
@@ -294,24 +309,35 @@ def make_violin(df: pd.DataFrame, var: str, gametime_threshold: bool = True):
                 ),
             ),
         )
-        .properties(width=100)
+        .properties(width=CHART_WIDTH / 2)
     )
 
     return violin
 
 
+def make_chart_arrays(charts: dict, title: str, rowlen: int = 3):
+    """Given a dict of altair charts, display in an array"""
+    base = alt.vconcat(title=title)
+    while charts:
+        rows = alt.hconcat()
+        for _ in range(rowlen):
+            if charts:
+                rows |= charts.popitem()[1]
+        base &= rows
+
+    return base
+
+
 merge_stats = [stat for stat in player_season.columns if "_merge" in stat]
+src = pd.concat([player_season, comparison], axis=0)
+
+logger.info("Creating violin charts")
 violins = {stat: make_violin(df=src, var=stat) for stat in merge_stats}
 
-base_violin = alt.vconcat(title="Traditional Stat Distribution between Seasons")
-while violins:
-    rows = alt.hconcat()
-    for _ in range(4):
-        if violins:
-            rows |= violins.popitem()[1]
-    base_violin &= rows
+violin_title = "Traditional Stat Distribution between Seasons"
+violins = make_chart_arrays(violins, violin_title)
 
-base_violin.configure_legend(
+violins.configure_legend(
     strokeColor="gray",
     fillColor="#EEEEEE",
     padding=10,
@@ -319,7 +345,8 @@ base_violin.configure_legend(
     orient="top-right",
 )
 # player_season_pts = make_violin(player_season, "PTS_merge")
-st.altair_chart(base_violin)
+logger.debug("Rendering violin charts")
+st.altair_chart(violins)
 
 # ----------------------------------------------------------------------------
 # User chooses the player for season comparison here
@@ -332,6 +359,7 @@ st.subheader(f"{player_name_input} Player Comparisons")
 # across season, we look not to indiv. stats, but to overall
 # impact and playtime
 src["comparison_rank"] = src["PLUS_MINUS_RANK"] + src["MIN_RANK"]
+src["selected_player"] = src["PLAYER_NAME"].apply(lambda x: x == player_name_input)
 player_stat = src.loc[src["PLAYER_NAME"] == player_name_input]
 # returns a pd.Series of len 1
 player_label = player_stat["label_pred"].values[0]
@@ -342,28 +370,59 @@ comparison_pool = src[
     & (src["gametime_threshold"])
 ]
 
+
 similarity_index = (
-    (comparison_pool["comparison_rank"] - player_stat["comp_rank"].values)
+    (comparison_pool["comparison_rank"] - player_stat["comparison_rank"].values)
     .abs()
     .sort_values(ascending=True)
     .index
 )
-similarity_rank = comparison_pool.loc[similarity_index]
+similars = comparison_pool.loc[similarity_index].head(2)
 
 
-def get_stat_ends(bar_stat: str, comparison_pool: pd.DataFrame):
-    bar_ranked = comparison_pool[bar_stat].sort_values(ascending=False).index
-    top = comparison_pool.loc[bar_ranked].head(1)
-    bot = comparison_pool.loc[bar_ranked].tail(1)
-    return top, bot
+def make_stat_bar(
+    bar_stat: str,
+    player: pd.DataFrame,
+    analogues: pd.DataFrame,
+    season_b: pd.DataFrame,
+):
+    """Creates a bar graph for five players given the stat:
+    1. Selected player
+    2. 2 x Similar players
+    3. 1 x Stat-Top
+    4. 1 x Stat-Bottom
 
+    Parameters:
+    -----------
+    bar_stat: str
+        "<stat>_merge"
 
-def make_stat_bar(bar_stat: str, df_stat):
+    player, analogues: pd.DataFrame
+        Record of the selected player and similar player stats
+
+    season_b: pd.DataFrame
+        Record of all players from season_b sharing same label as selected player
+        Used to find the top/bottom player for each given stat
+
+    Returns
+    -------
+    stat_bar: alt.Chart() object
+        bar graph of the five players and the given stat
+    """
+    bar_ranked = season_b[bar_stat].sort_values(ascending=False).index
+    top = season_b.loc[bar_ranked].head(1)
+    bot = season_b.loc[bar_ranked].tail(1)
+    df_stat = pd.concat([player, analogues, top, bot], axis=0)
     stat_bar = (
-        alt.Chart(df_stat)
+        alt.Chart(df_stat, title=bar_stat.replace("_merge", ""))
         .mark_bar(width=30)
         .encode(
-            y=f"{bar_stat}:Q",
+            y=alt.Y(
+                f"{bar_stat}:Q",
+                axis=alt.Axis(
+                    title=None,
+                ),
+            ),
             x=alt.X(
                 "PLAYER_NAME:N",
                 # sort=df_stat.sort_values(by=bar_stat)['PLAYER_NAME'].values,
@@ -371,20 +430,23 @@ def make_stat_bar(bar_stat: str, df_stat):
                 sort="y",
                 axis=alt.Axis(
                     labels=True,
-                    title="PLAYER NAME",
+                    title=None,
                     labelAngle=-30,
                 ),
             ),
-            color=f"selected_player:N",
+            color=alt.Color("selected_player:N", legend=None),
         )
-        .properties(width=300)
+        .properties(width=CHART_WIDTH)
     )
     return stat_bar
 
 
-# this will be looped to cover all the stats in `merge_stats`
-# top, bot = get_stat_ends(bar_stat=bar_stat, comparison_pool=comparison_pool)
-# df_stat = pd.concat([player_stat, similarity_rank.head(2), top, bot], axis=0)
-# df_stat["selected_player"] = df_stat.apply(
-#     lambda x: x["PLAYER_NAME"] == player_name_input, axis=1
-# )
+logger.info("Creating bar graphs for each stat")
+bars = {
+    stat: make_stat_bar(stat, player_stat, similars, comparison_pool)
+    for stat in merge_stats
+}
+bar_title = "Stat Comparison between chosen player and selected players from comparison season".title()
+bar_graphs = make_chart_arrays(bars, title=bar_title)
+logger.info("Rendering in streamlit")
+st.altair_chart(bar_graphs)
