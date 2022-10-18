@@ -225,30 +225,39 @@ def register_model(run_id: str):
     ## register
     # /model comes from .log_model path
     model_uri = f"runs:/{run_id}/model"
-    # model_vers contains meta_data of the registered model,
-    # e.g. timestamps, source, tags, desc
-    # doc:
-    # https://mlflow.org/docs/latest/python_api/mlflow.entities.html#mlflow.entities.model_registry.ModelVersion
-    model_vers = mlflow.register_model(
-        model_uri,
-        MLFLOW_REGISTERED_MODEL,
-    )
-    logger.debug(f"{model_vers}")
-    ## promote
-    # returns list[ModelVersion]
     latest_vers = client.get_latest_versions(
         name=MLFLOW_REGISTERED_MODEL,
     )
     logger.info(latest_vers)
+    run_id_prev = latest_vers[-1].run_id
 
-    client.transition_model_version_stage(
-        name=MLFLOW_REGISTERED_MODEL,
-        version=latest_vers[-1].version,
-        stage="Production",
-        archive_existing_versions=True,
-    )
-    # ModelVersion of the registered model
-    return latest_vers[-1]
+    if run_id != run_id_prev:
+        # model_vers contains meta_data of the registered model,
+        # e.g. timestamps, source, tags, desc
+        # doc:
+        # https://mlflow.org/docs/latest/python_api/mlflow.entities.html#mlflow.entities.model_registry.ModelVersion
+        model_vers = mlflow.register_model(
+            model_uri,
+            MLFLOW_REGISTERED_MODEL,
+        )
+        logger.debug(f"Registered model metadata:\n{model_vers[0]}")
+        ## promote
+        # returns list[ModelVersion]
+
+        client.transition_model_version_stage(
+            name=MLFLOW_REGISTERED_MODEL,
+            version=latest_vers[-1].version,
+            stage="Production",
+            archive_existing_versions=True,
+        )
+        # ModelVersion of the registered model
+        return latest_vers[-1]
+
+    else:
+        logger.info(
+            f"Previous model (run_id:{run_id}) is still the best performing, no new versions made."
+        )
+        return None
 
 
 def _run(
@@ -280,7 +289,8 @@ def _run(
 
     logger.info("Registering model")
     model_vers = register_model(run_id)
-    logger.debug(f"{model_vers}")
+    if model_vers:
+        logger.debug(f"Registered model meta info:\n{model_vers[0]}")
 
 
 if __name__ == "__main__":

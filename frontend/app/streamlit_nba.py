@@ -69,9 +69,15 @@ st.title("NBA Player Comparisons across Eras")
 # USER INPUT
 # ----------------------------------------------------------------------------
 
-season_a_input = "2018-19"
-season_b_input = "2004-05"
-player_name_input = "Fred VanVleet"
+# season_a_input = "2018-19"
+# season_b_input = "2004-05"
+# player_name_input = "Fred VanVleet"
+season_choices = [f"{year}-{str(year+1)[-2:]}" for year in range(1990, 2022)]
+season_a_input = st.selectbox("Pick the season of your choice", season_choices)
+player_name_input = st.text_input(label="Input an NBA player's name  from that season")
+season_b_input = st.selectbox(
+    "Pick the season to compare the selected player against", season_choices
+)
 
 # ----------------------------------------------------------------------------
 # Loading data based on input
