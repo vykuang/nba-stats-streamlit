@@ -14,6 +14,15 @@ Components to dockerize:
 - streamlit
   - Exposes the downloaded data and clusterer labels to end-user
 
+## Steps for dockerizing to production
+
+1. Run locally in docker
+1. Basic security
+1. Automate builds
+1. Easier debugging and operational correctness
+1. Make it reproducible
+1. Improve performance by speeding build time and reducing image size
+
 ## Execution
 
 Each *service* will have their own `dockerfile`, and stitched together with `docker-compose.yaml`.
@@ -32,3 +41,7 @@ All services need to share a volume
 - `train` to collect cleaned data
 - `mlflow` to store `mlflow.db` backend and `./mlruns` artifacts
 - `streamlit` to retrieve the production stage model from `.mlruns` after perusing `mlflow.db`
+
+### Testing
+
+How to test each service? Run a dockerfile for each, and unit-test them.
