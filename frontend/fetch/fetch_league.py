@@ -1,3 +1,4 @@
+#! usr/bin/env python
 import argparse
 import json
 import logging
@@ -145,6 +146,12 @@ if __name__ == "__main__":
         default="../data",
     )
     parser.add_argument(
+        "--dryrun",
+        "-d",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
         "--loglevel",
         "-l",
         type=str.upper,
@@ -155,4 +162,5 @@ if __name__ == "__main__":
 
     if not args.data_path.exists():
         args.data_path.mkdir(parents=True, exist_ok=False)
-    main(args.season, args.data_path, args.loglevel)
+    if not args.dryrun:
+        main(args.season, args.data_path, args.loglevel)
