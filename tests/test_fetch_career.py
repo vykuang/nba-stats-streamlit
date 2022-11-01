@@ -4,7 +4,7 @@ from pathlib import Path
 from nba_api.stats.endpoints import playercareerstats
 from nba_api.stats.static import players
 
-from frontend import fetch_career
+from frontend.fetch import fetch_career
 
 
 def test_get_career_stats(monkeypatch):

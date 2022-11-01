@@ -70,6 +70,8 @@ docker run -v nba-pkl:/data nba-streamlit/fetch:latest
 - Dockerfile requires `poetry run` prior to `python` so that it can use the poetry installed venv
 - `ENTRYPOINT` and `CMD` both start in the path set by `WORKDIR`, i.e. `/app`
 
+### Train
+
 ### Testing
 
 How to test each service? Run a dockerfile for each, and unit-test them.
