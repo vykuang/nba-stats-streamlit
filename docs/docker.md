@@ -44,6 +44,86 @@ Images will be created based on the task dependencies
   - Then test against network postgres container
 - `streamlit` is standalone
 
+#### mlflow
+
+Making my own mlflow image using 1.28.
+
+Dockerfile does the following:
+
+- 3.9-slim as base
+- create `mlflow-venv` to pip install our mlflow
+- `pip install mlflow`
+- expose port
+- use `ENV` vars to set backend-store and artifact-root
+- `mlflow server -- ...`
+
+Execution notes:
+
+- Without our venv, we're running pip as root inside our container, which "may result in broken permissions and conflicting behaviours..."
+
+  - see [docs here](https://pip.pypa.io/warnings/venv)
+
+- Activating our newly created venv is a little tricky. Usually we do this:
+
+  ```bash
+  python -m venv my-venv-dir
+  source my-venv-dir/bin/activate
+  ```
+
+  which translates to this in dockerfile:
+
+  ```dockerfile
+  # from https://pythonspeed.com/articles/activate-virtualenv-dockerfile/
+  FROM python:3.9-slim-bullseye
+  RUN python3 -m venv /opt/venv
+
+  # This is wrong!
+  # RUN . is how we "source" files in docker
+  RUN . /opt/venv/bin/activate
+
+  # Install dependencies:
+  COPY requirements.txt .
+  RUN pip install -r requirements.txt
+
+  # Run the application:
+  COPY myapp.py .
+  CMD ["python", "myapp.py"]
+  ```
+
+- However that will not work as intended:
+
+  1. Every `RUN` in dockerfile is a separate process; it has no effect on future `RUN` calls. `RUN` . /activate is effective a no-op
+  1. `CMD` is also unaffected by `RUN` and thus will not run inside our venv as intended
+
+- \[OPTION 1\] Reference the path to venv in each python call
+
+  - `${MLFLOW_VENV}/bin/pip install --upgrade pip`
+  - caveat: subprocess will not run in the venv
+
+- \[OPTION 2\] Activate our venv in each `RUN` and `CMD`
+
+  - `RUN . /opt/venv/bin/activate && pip install`
+
+At its core, `activate` does the following things:
+
+1. finds what shell we're currently in
+1. adds `deactivate` function to the shell
+1. changes the prompt to include venv's name
+1. *unsets* `PYTHONHOME` env var
+1. *sets* two env vars: `VIRTUAL_ENV` and `PATH`
+
+The first four has no effect on docker, and so if we can emulate the last step, we're golden. Even for the last step, `VIRTUAL_ENV` has no impact, except when some tools use it to detect whether we're already inside a venv.
+
+So if we set `PATH` correctly, we can activate our venv properly:
+
+```dockerfile
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+```
+
+`CMD` and `RUN` now works with our venv
+
 ### Network
 
 MLflow and streamlit will need to share a network. Streamlit will need to expose a public port.
@@ -69,6 +149,7 @@ docker run -v nba-pkl:/data nba-streamlit/fetch:latest
 - `/data` is in the root dir of the container, and is also specified in dockerfile's `CMD`
 - Dockerfile requires `poetry run` prior to `python` so that it can use the poetry installed venv
 - `ENTRYPOINT` and `CMD` both start in the path set by `WORKDIR`, i.e. `/app`
+- compose `entrypoint` and `command` config can override the dockerfile setting
 
 ### Train
 
