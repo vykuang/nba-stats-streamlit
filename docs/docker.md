@@ -151,6 +151,14 @@ docker run -v nba-pkl:/data nba-streamlit/fetch:latest
 - `ENTRYPOINT` and `CMD` both start in the path set by `WORKDIR`, i.e. `/app`
 - compose `entrypoint` and `command` config can override the dockerfile setting
 
+#### MLflow
+
+Create mlflow volume? or use subdir of existing?
+
+Create new mlflow volume for `./mlruns` and `mlflow.db`
+
+If using local db, use sqlite? I think artifact store should be a different volume, so we can specify a local `./mlruns` dir, or a remote cloud storage if we so wished.
+
 ### Train
 
 ### Testing
