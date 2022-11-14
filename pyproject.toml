@@ -39,7 +39,6 @@ mlflow = "~1.28.0"
 Flask = "^2.2.2"
 streamlit = "^1.12.2"
 nba-api = "^1.1.11"
-tqdm = "^4.64.1"
 hyperopt = "^0.2.7"
 
 

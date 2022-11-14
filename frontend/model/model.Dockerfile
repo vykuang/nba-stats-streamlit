@@ -27,7 +27,8 @@ ENV PATH="${PATH}:${POETRY_VENV}/bin"
 WORKDIR /model
 
 # install dependencies
-COPY poetry.lock pyproject.toml /app/
+# no lock file because I didn't want to create a whole venv for it
+COPY pyproject.toml /model/
 
 # [optional] validate project config
 RUN poetry check

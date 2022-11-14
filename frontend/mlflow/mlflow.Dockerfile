@@ -14,4 +14,4 @@ WORKDIR /mlflow
 ENV BACKEND_URI sqlite:////mlflow/backend/mlflow.db
 ENV ARTIFACT_ROOT /mlflow/artifacts
 ENTRYPOINT [ "mlflow", "server" ]
-CMD [ "--backend-store-uri", "${BACKEND_URI}", "--default-artifact-root", "${ARTIFACT_ROOT}", "--host", "0.0.0.0", "--port", "5000" ]
+CMD [ "--backend-store-uri", "${BACKEND_URI:-sqlite:////mlflow/backend/mlflow.db}", "--default-artifact-root", "${ARTIFACT_ROOT}", "--host", "0.0.0.0", "--port", "5000" ]

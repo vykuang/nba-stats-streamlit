@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "frontend-model"
+version = "0.1.0"
+description = "Containerized script to transform the nba_api calls and train clusterer"
+authors = ["vykuang <vykuang92@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9.8"
+scikit-learn = "~1.1.0"
+mlflow = "~1.28.0"
+hyperopt = "^0.2.7"
+
+
+[tool.poetry.group.dev.dependencies]

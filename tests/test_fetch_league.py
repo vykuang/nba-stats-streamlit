@@ -1,7 +1,7 @@
 """Tests the functions within fetch_league module"""
 from nba_api.stats.endpoints import leaguedashplayerstats
 
-from frontend import fetch_league
+from frontend.fetch import fetch_league
 
 
 def test_league_json(monkeypatch):

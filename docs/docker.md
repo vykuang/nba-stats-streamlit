@@ -124,6 +124,51 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 `CMD` and `RUN` now works with our venv
 
+Run locally with
+
+```bash
+docker build -f mlflow.Dockerfile -t docker-mlflow .
+docker run -d -p 5000:5000 docker-mlflow
+```
+
+#### model
+
+Only sent the `pyproject.toml` in to build the image because I didn't want to build a whole venv just for the .lock file. Build takes longer.
+
+```bash
+docker build -f model.Dockerfile -t nba-streamlit/model .
+```
+
+Attached `nba-pkl` volume, transform works
+
+To get my `train.py` working I need the following
+
+1. Schedule `train` to run after `transform`. Use a bash script and `&&` to run them sequentially?
+   - run `train` on its own by specifying `train.py` in my `docker run` command, since it will overwrite the `transform.py` CMD in my dockerfile
+   - set args to `train` as usual
+1. Connect the mlflow container via a network
+   - create the network - `docker network create nba-streamlit-mlflow`
+   - attach the two containers to the network
+     - `docker network connect nba-streamlit-mlflow <mlflow_container_name>`
+     - the container name can be found with `docker ps`
+     - start my `model` container and connect to that network
+     - `docker run --network=nba-streamlit-mlflow nba-streamlit/model`
+1. Edit the `train` script to connect to remote mlflow tracking
+   - set `MLFLOW_TRACKING_URI` env var to the mlflow container:5000 address
+   - in `docker run`, set flag `-e "MLFLOW_TRACKING_URI=<mlflow_container_name>:5000"`
+   - can use `docker network --alias` to set host name for more legible resolution, much like how docker compose does it
+   - otherwise, use `docker network inspect na-streamlit-mlflow` to see what IP to set it to
+
+Running into an environment var issue. When running `train`:
+
+```
+Model registry functionality is unavailable; got unsupported URI '${BACKEND_URI:-sqlite:////mlflow/backend/mlflow.db}' for model registry data storage.
+```
+
+That's what was in the mlflow dockerfile. Inspecting the mlflow container reveals that the correct substitution has taken place, but not when `train` connects to it???
+
+Also the experiment was successfully logged???
+
 ### Network
 
 MLflow and streamlit will need to share a network. Streamlit will need to expose a public port.

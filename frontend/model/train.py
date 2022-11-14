@@ -277,6 +277,8 @@ def _run(
 
     logger.addHandler(handler)
 
+    logger.info(f"Mlflow tracking URI: {MLFLOW_TRACKING_URI}")
+
     file_path = data_path / f"leaguedash_merge_{season}.pkl"
     logger.info(f"Loading data from: {file_path.resolve()}")
     df = pd.read_pickle(file_path.resolve())
