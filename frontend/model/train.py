@@ -224,26 +224,37 @@ def register_model(run_id: str):
     """
     ## register
     # /model comes from .log_model path
-    model_uri = f"runs:/{run_id}/model"
-    latest_vers = client.get_latest_versions(
-        name=MLFLOW_REGISTERED_MODEL,
-    )
-    logger.info(latest_vers)
-    run_id_prev = latest_vers[-1].run_id
+    # does the model exist?
+    run_id_prev = None
+    # note the single quote around the search value
+    models = client.search_model_versions(f"name='{MLFLOW_REGISTERED_MODEL}'")
+    if models:
+        latest_vers = client.get_latest_versions(
+            name=MLFLOW_REGISTERED_MODEL,
+        )
+        logger.info(latest_vers)
+        run_id_prev = latest_vers[-1].run_id
 
     if run_id != run_id_prev:
         # model_vers contains meta_data of the registered model,
         # e.g. timestamps, source, tags, desc
         # doc:
         # https://mlflow.org/docs/latest/python_api/mlflow.entities.html#mlflow.entities.model_registry.ModelVersion
+        model_uri = f"runs:/{run_id}/model"
         model_vers = mlflow.register_model(
             model_uri,
             MLFLOW_REGISTERED_MODEL,
         )
-        logger.debug(f"Registered model metadata:\n{model_vers[0]}")
+        # model_vers is NOT SUBSCRIPTABLE. Use the attributes given, e.g. run_id
+        logger.debug(
+            f"""
+            Registered model run_id:\t{model_vers.run_id}
+            source:\t {model_vers.source}
+            """
+        )
+
         ## promote
         # returns list[ModelVersion]
-
         client.transition_model_version_stage(
             name=MLFLOW_REGISTERED_MODEL,
             version=latest_vers[-1].version,

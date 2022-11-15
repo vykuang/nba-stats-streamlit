@@ -159,15 +159,32 @@ To get my `train.py` working I need the following
    - can use `docker network --alias` to set host name for more legible resolution, much like how docker compose does it
    - otherwise, use `docker network inspect na-streamlit-mlflow` to see what IP to set it to
 
-Running into an environment var issue. When running `train`:
+- Running into an environment var issue. When running `train`:
 
-```
-Model registry functionality is unavailable; got unsupported URI '${BACKEND_URI:-sqlite:////mlflow/backend/mlflow.db}' for model registry data storage.
-```
+  ```py
+  Model registry functionality is unavailable; got unsupported URI '${BACKEND_URI:-sqlite:////mlflow/backend/mlflow.db}' for model registry data storage.
+  ```
 
-That's what was in the mlflow dockerfile. Inspecting the mlflow container reveals that the correct substitution has taken place, but not when `train` connects to it???
+  That's what was in the mlflow dockerfile. Inspecting the mlflow container reveals that the correct substitution has taken place, but not when `train` connects to it???
 
-Also the experiment was successfully logged???
+  Also the experiment was successfully logged???
+
+  Try using straight `sqlite:////mlflow/mlflow.db` instead of ENV
+
+  In my `server.sh`, replace the CMD args passed in dockerfile with hard coded args for:
+
+  - backend
+  - artifact
+  - host (VERY IMPORTANT, OTHERWISE DEFAULTS TO LOCALHOST AND UNABLE TO BE CONNECTED TO)
+  - port
+
+- `RESOURCE_DOES_NOT_EXIST: Registered Model with name=nba-player-clusterer not found`
+  No registered model to be found with `client.get_latest_versions()`. I need to check whether that registered model exists first.
+
+  Use `client.search_registered_models` to see if one exists. If it does, look for the most recent one's `run_id` to compare with the current. If it does not, register our model (as the first)
+
+  - Need single quotes around the search value in our filter string passed to `search()`
+  - In debug, when listing the registered model's properties, do not subscript. Use properties. `.register_model()` returns a single `ModelVersion` entity, not a list.
 
 ### Network
 
