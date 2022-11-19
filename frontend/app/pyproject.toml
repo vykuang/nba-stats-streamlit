@@ -1,0 +1,12 @@
+[tool.poetry]
+name = "frontend-app"
+version = "0.1.0"
+description = ""
+authors = ["vykuang <vykuang92@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9.8"
+streamlit = "^1.12.2"
+mlflow = "^1.28"
+
+[tool.poetry.group.dev.dependencies]

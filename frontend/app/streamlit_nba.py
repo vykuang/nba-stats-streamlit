@@ -48,10 +48,10 @@ logger.addHandler(handler)
 CHART_WIDTH = 300
 
 # THIS IS A MAGIC CONSTANT AND MUST BE RESOLVED AT DEPLOYMENT
-REL_PATH = "../model"
+MLFLOW_PATH = os.getenv("MLFLOW_PATH", "../model")
 
 MLFLOW_TRACKING_URI = os.getenv(
-    "MLFLOW_TRACKING_URI", f"sqlite:///{REL_PATH}/mlflow.db"
+    "MLFLOW_TRACKING_URI", f"sqlite:///{MLFLOW_PATH}/mlflow.db"
 )
 MLFLOW_EXP_NAME = os.getenv("MLFLOW_EXP_NAME", "nba-leaguedash-cluster")
 MLFLOW_REGISTERED_MODEL = os.getenv("MLFLOW_REGISTERED_MODEL", "nba-player-clusterer")
@@ -104,7 +104,6 @@ data_load_state = st.text("Loading pickle...")
 logger.info("Loaded data")
 
 
-@st.cache
 def retrieve(model_name: str) -> mlflow.pyfunc.PyFuncModel:
     """
     Retrieves and returns the latest version of the registered model
@@ -123,8 +122,8 @@ def retrieve(model_name: str) -> mlflow.pyfunc.PyFuncModel:
         # the models:/model_name/Production uri is only useable if MLflow server is up
         retrieve_model = mlflow.pyfunc.load_model(
             # model_uri=f'models:/{MLFLOW_REGISTERED_MODEL}/Production'
-            model_uri=Path(REL_PATH)
-            / model_uris[-1]
+            # model_uri=Path(MLFLOW_PATH) / model_uris[-1]
+            model_uri=model_uris[-1]
         )
         return retrieve_model
     else:

@@ -178,6 +178,8 @@ To get my `train.py` working I need the following
   - host (VERY IMPORTANT, OTHERWISE DEFAULTS TO LOCALHOST AND UNABLE TO BE CONNECTED TO)
   - port
 
+  How does `docker-compose` change how envs are treated?
+
 - `RESOURCE_DOES_NOT_EXIST: Registered Model with name=nba-player-clusterer not found`
   No registered model to be found with `client.get_latest_versions()`. I need to check whether that registered model exists first.
 
@@ -185,6 +187,37 @@ To get my `train.py` working I need the following
 
   - Need single quotes around the search value in our filter string passed to `search()`
   - In debug, when listing the registered model's properties, do not subscript. Use properties. `.register_model()` returns a single `ModelVersion` entity, not a list.
+
+#### streamlit
+
+Streamlit will be standalone. Base off python-slim
+
+Volumes attached:
+
+- mlflow - so that `mlflow.client` can search through the backend for the production stage model, and retrieve it from artifact root
+- nba-pkl - to retrieve the `_merge.pkl`
+
+Network - to connect to mlflow tracking server
+
+Export port 8501
+
+Mlflow 1.30 was installed, and since I created the original db in 1.28, need to run `mlflow db upgrade <database_uri>`
+
+- should not have been an issue to begin with...
+- Is there a way for me to add this to the Dockerfile?
+- The URI is dependent on how I mount the `mlflow` volume
+- If I always mount to `/mlflow`, I can add `mlflow db upgrade sqlite:////mlflow/mlflow.db` to streamlit.Dockerfile
+- But since that database is mounted, what if the dockerfile runs the upgrade before the volume's attached??? When is the volume attached???
+- Maybe better to just pin mlflow=1.28
+
+Why is my `artifacts` folder inside the `mlflow` volume empty??? My artifacts were actually stored in all these weird folder names that I tried to pass as backend store variable:
+
+```bash
+ls /mlflow/
+'$BACKEND_URI'  '${BACKEND_URI:-sqlite:'  '${BACKEND_URI}'   artifacts   mlflow.db
+```
+
+Hmm. But my mlflow client seems to think it's in `artifacts`???
 
 ### Network
 
