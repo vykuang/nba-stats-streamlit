@@ -8,10 +8,20 @@ ENV PATH="${VIRTUAL_ENV}/bin:$PATH"
 RUN pip install --upgrade pip \
     && pip install mlflow==${MLFLOW_VERSION} --no-cache-dir
 
-EXPOSE 5000
-
 WORKDIR /mlflow
-ENV BACKEND_URI sqlite:////mlflow/backend/mlflow.db
-ENV ARTIFACT_ROOT /mlflow/artifacts
-ENTRYPOINT [ "mlflow", "server" ]
-CMD [ "--backend-store-uri", "${BACKEND_URI:-sqlite:////mlflow/backend/mlflow.db}", "--default-artifact-root", "${ARTIFACT_ROOT}", "--host", "0.0.0.0", "--port", "5000" ]
+ENV MLFLOW_BACKEND_STORE_URI=sqlite:////mlflow/backend/mlflow.db
+ENV MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/mlruns
+ENV MLFLOW_HOST=0.0.0.0
+ENV MLFLOW_PORT=5000
+
+EXPOSE ${MLFLOW_PORT}
+
+ENTRYPOINT exec mlflow server \
+    --backend-store-uri ${MLFLOW_BACKEND_STORE_URI} \
+    --default-artifact-root ${MLFLOW_DEFAULT_ARTIFACT_ROOT} \
+    --host ${MLFLOW_HOST} \
+    --port ${MLFLOW_PORT}
+# CMD [ "--help" ]
+# use env var to set defaults
+# see https://mlflow.org/docs/latest/cli.html#mlflow-server for env vars
+# CMD --host ${MLFLOW_HOST:-0.0.0.0} --port ${MLFLOW_PORT:-5000}

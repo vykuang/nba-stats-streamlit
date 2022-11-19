@@ -188,6 +188,20 @@ To get my `train.py` working I need the following
   - Need single quotes around the search value in our filter string passed to `search()`
   - In debug, when listing the registered model's properties, do not subscript. Use properties. `.register_model()` returns a single `ModelVersion` entity, not a list.
 
+  Back to the issue with `CMD` and my env substitution, per [dockerfile docs](https://docs.docker.com/engine/reference/builder/#cmd):
+
+  > Unlike the shell form, the exec form does not invoke a command shell. This means that normal shell processing does not happen. For example, CMD \[ "echo", "$HOME" \] will not do variable substitution on $HOME. If you want shell processing then either use the shell form or execute a shell directly, for example: CMD \[ "sh", "-c", "echo $HOME" \]. When using the exec form and executing a shell directly, as in the case for the shell form, it is the shell that is doing the environment variable expansion, not docker.
+
+Use shell form if I want param substitution.
+
+I tried to use only ENV vars to set the defaults for `mlflow server` but it seems those are for version 2.0.1 only???
+
+I tried the recommended practice of using `ENTRYPOINT` as instruction, and `CMD` as default args, but in this case *both* must be in the form of JSON array formats, i.e. exec form, i.e. `[ "param1", "param2" ]`. But if I need to sub env vars inside, I need shell form, in which case `CMD` can no longer act as default args for `ENTRYPOINT`
+
+Use `ENTRYPOINT` in shell form to make use of shell sub. Per docs, need to start our `ENTRYPOINT` command with `exec` so that `docker stop` can properly stop the container.
+
+MLflow's UI is unable to retrieve model artifacts. Keeps trying for `/mlflow/artifacts/1/<RUN_ID>/artifacts/model/MLmodel` when it should be `/mlflow/mlruns/...`. Database is fine. Artifacts is messing up.
+
 #### streamlit
 
 Streamlit will be standalone. Base off python-slim

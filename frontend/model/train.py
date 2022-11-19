@@ -218,7 +218,7 @@ def find_best_model() -> str:
     return best_runs[0].info.run_id
 
 
-def register_model(run_id: str):
+def register_model(run_id: str) -> mlflow.entities.model_registry.ModelVersion:
     """
     Register the model and promote to production stage
     """
@@ -255,14 +255,15 @@ def register_model(run_id: str):
 
         ## promote
         # returns list[ModelVersion]
-        client.transition_model_version_stage(
-            name=MLFLOW_REGISTERED_MODEL,
-            version=latest_vers[-1].version,
-            stage="Production",
-            archive_existing_versions=True,
-        )
+        if models:
+            client.transition_model_version_stage(
+                name=MLFLOW_REGISTERED_MODEL,
+                version=latest_vers[-1].version,
+                stage="Production",
+                archive_existing_versions=True,
+            )
         # ModelVersion of the registered model
-        return latest_vers[-1]
+        return model_vers
 
     else:
         logger.info(
@@ -303,7 +304,7 @@ def _run(
     logger.info("Registering model")
     model_vers = register_model(run_id)
     if model_vers:
-        logger.debug(f"Registered model meta info:\n{model_vers[0]}")
+        logger.debug(f"Registered model meta info:\n{model_vers}")
 
 
 if __name__ == "__main__":

@@ -42,4 +42,4 @@ COPY . /model/
 # run the app
 ENTRYPOINT [ "poetry", "run", "python" ]
 
-CMD [ "transform.py", "--season", "2018-19", "--data_path", "/data" ]
+# CMD [ "transform.py", "--season", "2018-19", "--data_path", "/data" ]
