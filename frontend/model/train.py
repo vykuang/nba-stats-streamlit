@@ -259,7 +259,7 @@ def register_model(run_id: str) -> mlflow.entities.model_registry.ModelVersion:
         if models:
             client.transition_model_version_stage(
                 name=MLFLOW_REGISTERED_MODEL,
-                version=latest_vers[-1].version,
+                version=model_vers.version,
                 stage="Production",
                 archive_existing_versions=True,
             )

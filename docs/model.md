@@ -23,6 +23,13 @@ Criteria for model registry:
 - `n_labels` >= 3: any fewer would be an underfit
 - Highest `silhouette_score`
 
+### Tips and tricks
+
+- If `mlflow` version has been upgraded, `mlflow db upgrade <db_uri>` is required for the newer mlflow to interact with the database file.
+  - Try to stick to the same version for a project, obviously.
+- `--default-artifact-root` is relative to the container running the mlflow runs, not relative to the mlflow tracking server. Attach volumes appropriately, to both the tracking server and the mlflow run container
+- `.log_model(artifact_path=...)` is very sticky, and difficult to change once the experiment name has been logged. I've had to remove both the .db and ./mlruns volume before my `.log_model` correctly updates to my specified artifact_path
+
 ## Visualizing the learned labels
 
 How to go about this. Seems like a manual process. Ah Lebron is group 0, and Bam is in 1? Does that make sense?

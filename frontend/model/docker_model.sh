@@ -7,5 +7,5 @@
     -e "MLFLOW_TRACKING_URI=http://172.18.0.2:5000" \
     --name nba-train \
     nba-streamlit/model \
-        train.py --data_path /data --season "2018-19" --max_evals 3
+        train.py --data_path /data --season "2018-19" --max_evals 10
         # transform.py --data_path /data  --season "2004-05"

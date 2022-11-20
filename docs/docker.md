@@ -218,6 +218,8 @@ Solution:
   - In `.log_model()`, used `artifact_path="sk_model"`
   - In `mlflow.register_model()`, set `model_uri` to `/model`
   - Set as ENV VAR `MLFLOW_ARTIFACT_PATH`
+  - Reset metadata involved with the experiment (reset the .db and ./mlruns volume), otherwise the new `artifact_path` does not update
+  - re-run experiments
 
 #### streamlit
 
@@ -358,3 +360,11 @@ CMD [ "poetry", "--version" ]
 Some disable `venv` in docker as the container is its own isolated environment, but having a venv still serves a purpose because it can *leverage multi-stage builds to reduce image size*.
 
 - Build stage installs into the venv, and final stage simply copies the venv over to a smaller image
+
+## Tips and tricks
+
+- `docker system df` to view storage makeup; `-v` for more detail
+- `docker commit <container_name> <new_img> && docker run -it --entrypoint=bash <new_img>` to inspect short-lived containers
+- Environment variable substitutions are *not available* for `ENTRYPOINT` and `CMD` in exec mode, i.e. JSON array, i.e. `[ "cmd","param1","param2" ]`. Use shell form
+  - shell from requires `exec` in front to allow graceful `docker stop <container>`
+- `RUN` is always its own process, and has no effect on subsequent commands. E.g. `RUN poetry shell` will not let following commands run in the venv
