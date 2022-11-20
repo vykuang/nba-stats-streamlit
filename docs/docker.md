@@ -202,6 +202,23 @@ Use `ENTRYPOINT` in shell form to make use of shell sub. Per docs, need to start
 
 MLflow's UI is unable to retrieve model artifacts. Keeps trying for `/mlflow/artifacts/1/<RUN_ID>/artifacts/model/MLmodel` when it should be `/mlflow/mlruns/...`. Database is fine. Artifacts is messing up.
 
+Answer: Mlflow is storing the models inside the `nba-train` container, not the mlflow server. How I found out:
+
+I needed to inspect the stopped container `nba-train`. Usually `docker start container` and `docker exec -it container` is enough, but since ours will exit upon completion, there isn't enough time for `exec`. Thus, we commit the state of the container to in image, and then run that image interactively for inspection.
+
+```bash
+docker commit nba-train nba-train-debug
+docker run -it --entrypoint /bin/sh nba-train-debug
+```
+
+Solution:
+
+- First thought would be to do attach the volume to the `nba-train` container as well, to capture the runs.
+- Inconsistency in our model path
+  - In `.log_model()`, used `artifact_path="sk_model"`
+  - In `mlflow.register_model()`, set `model_uri` to `/model`
+  - Set as ENV VAR `MLFLOW_ARTIFACT_PATH`
+
 #### streamlit
 
 Streamlit will be standalone. Base off python-slim

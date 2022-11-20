@@ -28,6 +28,7 @@ from sklearn.preprocessing import StandardScaler
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "sqlite:///mlflow.db")
 MLFLOW_EXP_NAME = os.getenv("MLFLOW_EXP_NAME", "nba-leaguedash-cluster")
 MLFLOW_REGISTERED_MODEL = os.getenv("MLFLOW_REGISTERED_MODEL", "nba-player-clusterer")
+MLFLOW_ARTIFACT_PATH = os.getenv("MLFLOW_ARTIFACT_PATH", "sk_model")
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(sys.stdout)
@@ -151,7 +152,7 @@ def model_search(data: pd.DataFrame, num_trials: int = 10) -> Trials:
             loss = -silh
             model_meta = mlflow.sklearn.log_model(
                 cluster_pipe,
-                artifact_path="model",
+                artifact_path=MLFLOW_ARTIFACT_PATH,
             )
             logger.debug(f"model_meta: {model_meta}")
 
@@ -240,13 +241,13 @@ def register_model(run_id: str) -> mlflow.entities.model_registry.ModelVersion:
         # e.g. timestamps, source, tags, desc
         # doc:
         # https://mlflow.org/docs/latest/python_api/mlflow.entities.html#mlflow.entities.model_registry.ModelVersion
-        model_uri = f"runs:/{run_id}/model"
+        model_uri = f"runs:/{run_id}/{MLFLOW_ARTIFACT_PATH}"
         model_vers = mlflow.register_model(
             model_uri,
             MLFLOW_REGISTERED_MODEL,
         )
         # model_vers is NOT SUBSCRIPTABLE. Use the attributes given, e.g. run_id
-        logger.debug(
+        logger.info(
             f"""
             Registered model run_id:\t{model_vers.run_id}
             source:\t {model_vers.source}
@@ -264,7 +265,6 @@ def register_model(run_id: str) -> mlflow.entities.model_registry.ModelVersion:
             )
         # ModelVersion of the registered model
         return model_vers
-
     else:
         logger.info(
             f"Previous model (run_id:{run_id}) is still the best performing, no new versions made."
@@ -304,7 +304,7 @@ def _run(
     logger.info("Registering model")
     model_vers = register_model(run_id)
     if model_vers:
-        logger.debug(f"Registered model meta info:\n{model_vers}")
+        logger.info(f"Registered model meta info:\n{model_vers}")
 
 
 if __name__ == "__main__":

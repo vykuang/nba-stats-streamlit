@@ -1,5 +1,5 @@
 #! /usr/bin/env sh
-docker run -d \
+docker run -d --rm \
     --network=nba-streamlit-mlflow \
     -p 5000:5000 \
     --name mlflow \
