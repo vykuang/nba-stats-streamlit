@@ -23,25 +23,6 @@ Components to dockerize:
 1. Make it reproducible
 1. Improve performance by speeding build time and reducing image size
 
-## Framework
-
-The fetch/train containers act as standalone functions for streamlit to call, if the requested season's stats are not locally available. `mlflow` is always up. `streamlit` is the initiator for calls to `fetch` and `train`. Thus, `streamlit` requires ability to start and run docker containers?
-
-If fetch/train are on the same network, perhaps easier to expose them as web service.
-
-### Web service
-
-- Streamlit `POST`s the requested season to fetch
-- fetch receives the year request and requests data via `nba_api`, storing as regular/playoff pickles
-- Once complete, trigger `transform` to create `_merge.pkl` using `/model` container
-- streamlit then clusters the players from the newly acquired season using existing model, based on the current nba season
-
-How would the trigger to `transform` work? I could set up `/model` as its own flask service, with routes to transform or train.
-
-How would streamlit know that the data has been fetched and processed for modelling? Base it off of the response from original `POST`: `fetch` receives response from `transform`, which informs the response back to streamlit
-
-Does streamlit itself need to be in a flask framework???
-
 ## Execution
 
 Each *service* will have their own `dockerfile`, and stitched together with `docker-compose.yaml`.
@@ -154,8 +135,6 @@ docker run -d -p 5000:5000 docker-mlflow
 
 Only sent the `pyproject.toml` in to build the image because I didn't want to build a whole venv just for the .lock file. Build takes longer.
 
-It actually takes much longer, and doesn't allow deterministic builds, depending on how the `.toml` is written. If such an image is already built, `exec` inside the image`, `cat\` the poetry.lock file, and paste it to local dir. If it hasn't been built yet, it's faster to build the venv locally to obtain the lock file, and build the image off of that.
-
 ```bash
 docker build -f model.Dockerfile -t nba-streamlit/model .
 ```
@@ -199,8 +178,6 @@ To get my `train.py` working I need the following
   - host (VERY IMPORTANT, OTHERWISE DEFAULTS TO LOCALHOST AND UNABLE TO BE CONNECTED TO)
   - port
 
-  How does `docker-compose` change how envs are treated?
-
 - `RESOURCE_DOES_NOT_EXIST: Registered Model with name=nba-player-clusterer not found`
   No registered model to be found with `client.get_latest_versions()`. I need to check whether that registered model exists first.
 
@@ -209,73 +186,13 @@ To get my `train.py` working I need the following
   - Need single quotes around the search value in our filter string passed to `search()`
   - In debug, when listing the registered model's properties, do not subscript. Use properties. `.register_model()` returns a single `ModelVersion` entity, not a list.
 
-  Back to the issue with `CMD` and my env substitution, per [dockerfile docs](https://docs.docker.com/engine/reference/builder/#cmd):
-
-  > Unlike the shell form, the exec form does not invoke a command shell. This means that normal shell processing does not happen. For example, CMD \[ "echo", "$HOME" \] will not do variable substitution on $HOME. If you want shell processing then either use the shell form or execute a shell directly, for example: CMD \[ "sh", "-c", "echo $HOME" \]. When using the exec form and executing a shell directly, as in the case for the shell form, it is the shell that is doing the environment variable expansion, not docker.
-
-Use shell form if I want param substitution.
-
-I tried to use only ENV vars to set the defaults for `mlflow server` but it seems those are for version 2.0.1 only???
-
-I tried the recommended practice of using `ENTRYPOINT` as instruction, and `CMD` as default args, but in this case *both* must be in the form of JSON array formats, i.e. exec form, i.e. `[ "param1", "param2" ]`. But if I need to sub env vars inside, I need shell form, in which case `CMD` can no longer act as default args for `ENTRYPOINT`
-
-Use `ENTRYPOINT` in shell form to make use of shell sub. Per docs, need to start our `ENTRYPOINT` command with `exec` so that `docker stop` can properly stop the container.
-
-MLflow's UI is unable to retrieve model artifacts. Keeps trying for `/mlflow/artifacts/1/<RUN_ID>/artifacts/model/MLmodel` when it should be `/mlflow/mlruns/...`. Database is fine. Artifacts is messing up.
-
-Answer: Mlflow is storing the models inside the `nba-train` container, not the mlflow server. How I found out:
-
-I needed to inspect the stopped container `nba-train`. Usually `docker start container` and `docker exec -it container` is enough, but since ours will exit upon completion, there isn't enough time for `exec`. Thus, we commit the state of the container to in image, and then run that image interactively for inspection.
-
-```bash
-docker commit nba-train nba-train-debug
-docker run -it --entrypoint /bin/sh nba-train-debug
-```
-
-Solution:
-
-- First thought would be to do attach the volume to the `nba-train` container as well, to capture the runs.
-- Inconsistency in our model path
-  - In `.log_model()`, used `artifact_path="sk_model"`
-  - In `mlflow.register_model()`, set `model_uri` to `/model`
-  - Set as ENV VAR `MLFLOW_ARTIFACT_PATH`
-  - Reset metadata involved with the experiment (reset the .db and ./mlruns volume), otherwise the new `artifact_path` does not update
-  - re-run experiments
-
-#### streamlit
-
-Streamlit will be standalone. Base off python-slim
-
-Volumes attached:
-
-- mlflow - so that `mlflow.client` can search through the backend for the production stage model, and retrieve it from artifact root
-- nba-pkl - to retrieve the `_merge.pkl`
-
-Network - to connect to mlflow tracking server
-
-Export port 8501
-
-Mlflow 1.30 was installed, and since I created the original db in 1.28, need to run `mlflow db upgrade <database_uri>`
-
-- should not have been an issue to begin with...
-- Is there a way for me to add this to the Dockerfile?
-- The URI is dependent on how I mount the `mlflow` volume
-- If I always mount to `/mlflow`, I can add `mlflow db upgrade sqlite:////mlflow/mlflow.db` to streamlit.Dockerfile
-- But since that database is mounted, what if the dockerfile runs the upgrade before the volume's attached??? When is the volume attached???
-- Maybe better to just pin mlflow=1.28
-
-Why is my `artifacts` folder inside the `mlflow` volume empty??? My artifacts were actually stored in all these weird folder names that I tried to pass as backend store variable:
-
-```bash
-ls /mlflow/
-'$BACKEND_URI'  '${BACKEND_URI:-sqlite:'  '${BACKEND_URI}'   artifacts   mlflow.db
-```
-
-Hmm. But my mlflow client seems to think it's in `artifacts`???
-
 ### Network
 
 MLflow and streamlit will need to share a network. Streamlit will need to expose a public port.
+
+- `nba-streamlit-mlflow` for mlflow and train
+- streamlit will also be connected to access mlflow's model registry
+- Different network (frontend) for streamlit to expose a public port????
 
 ### Volumes
 
@@ -312,7 +229,7 @@ If using local db, use sqlite? I think artifact store should be a different volu
 
 ### Testing
 
-How to test each service? Run a dockerfile for each, and unit-test them.
+How to test each service? Run a dockerfile for each, and unit-test them. Need to brush up on mlops-zoomcamp's video on integrating containers and testing
 
 ### Poetry
 
@@ -381,11 +298,3 @@ CMD [ "poetry", "--version" ]
 Some disable `venv` in docker as the container is its own isolated environment, but having a venv still serves a purpose because it can *leverage multi-stage builds to reduce image size*.
 
 - Build stage installs into the venv, and final stage simply copies the venv over to a smaller image
-
-## Tips and tricks
-
-- `docker system df` to view storage makeup; `-v` for more detail
-- `docker commit <container_name> <new_img> && docker run -it --entrypoint=bash <new_img>` to inspect short-lived containers
-- Environment variable substitutions are *not available* for `ENTRYPOINT` and `CMD` in exec mode, i.e. JSON array, i.e. `[ "cmd","param1","param2" ]`. Use shell form
-  - shell from requires `exec` in front to allow graceful `docker stop <container>`
-- `RUN` is always its own process, and has no effect on subsequent commands. E.g. `RUN poetry shell` will not let following commands run in the venv
