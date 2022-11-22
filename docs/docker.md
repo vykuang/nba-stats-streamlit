@@ -40,7 +40,7 @@ How would the trigger to `transform` work? I could set up `/model` as its own fl
 
 How would streamlit know that the data has been fetched and processed for modelling? Base it off of the response from original `POST`: `fetch` receives response from `transform`, which informs the response back to streamlit
 
-Does streamlit itself need to be in a flask framework???
+Does streamlit itself need to be in a flask framework??? No. Just use it to POST and then look for the results once it receives a reply
 
 ## Execution
 
@@ -154,7 +154,7 @@ docker run -d -p 5000:5000 docker-mlflow
 
 Only sent the `pyproject.toml` in to build the image because I didn't want to build a whole venv just for the .lock file. Build takes longer.
 
-It actually takes much longer, and doesn't allow deterministic builds, depending on how the `.toml` is written. If such an image is already built, `exec` inside the image`, `cat\` the poetry.lock file, and paste it to local dir. If it hasn't been built yet, it's faster to build the venv locally to obtain the lock file, and build the image off of that.
+It actually takes much longer, and doesn't allow deterministic builds, depending on how the `.toml` is written. If such an image is already built, `exec` inside the image, `cat` the poetry.lock file, and paste it to local dir. If it hasn't been built yet, it's faster to build the venv locally to obtain the lock file, and build the image off of that.
 
 ```bash
 docker build -f model.Dockerfile -t nba-streamlit/model .
@@ -381,6 +381,17 @@ CMD [ "poetry", "--version" ]
 Some disable `venv` in docker as the container is its own isolated environment, but having a venv still serves a purpose because it can *leverage multi-stage builds to reduce image size*.
 
 - Build stage installs into the venv, and final stage simply copies the venv over to a smaller image
+
+### Flask
+
+`fetch` and `model` will now be deployed as a web service for the streamlit app to `curl` when necessary.
+
+- Instead of `ENTRYPOINT poetry run python`, it'll run the `flask` app instead
+- `fetch` will fetch the season stats based on request
+  - If a re-train is necessary, `fetch` service will subsequently `curl` the `model` service
+  - `model` responds by training and registering a new clusterer based on the newly acquired dataset
+  - Responds back to `fetch`
+- `fetch` responds back to `streamlit` once dataset is fetched, and if a new model is also requested, then only after the new model is registered, following the okay from `model`
 
 ## Tips and tricks
 

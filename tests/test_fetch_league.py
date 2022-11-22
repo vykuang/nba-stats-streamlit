@@ -1,7 +1,7 @@
 """Tests the functions within fetch_league module"""
 from nba_api.stats.endpoints import leaguedashplayerstats
 
-from frontend.fetch import fetch_league
+from frontend.fetch import app
 
 
 def test_league_json(monkeypatch):
@@ -19,7 +19,7 @@ def test_league_json(monkeypatch):
         leaguedashplayerstats, "LeagueDashPlayerStats", mock_league_dash
     )
 
-    res = fetch_league.get_leaguedash_json("Regular Season", "2020-21", "Base")
+    res = app.get_leaguedash_json("Regular Season", "2020-21", "Base")
 
     assert res
     assert isinstance(res, list)

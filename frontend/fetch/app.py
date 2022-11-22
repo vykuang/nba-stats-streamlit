@@ -8,8 +8,10 @@ import sys
 import time
 from pathlib import Path
 
+from flask import Flask
 from nba_api.stats.endpoints import leaguedashplayerstats
 
+app = Flask(__name__)
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(sys.stdout)
 
@@ -63,6 +65,12 @@ def dump_pickle(obj, fp: Path) -> None:
         pickle.dump(obj, f_out)
 
 
+def load_pickle(fp: Path) -> dict:
+    """Load json pickle"""
+    with open(fp, "rb") as f_in:
+        return pickle.load(f_in)
+
+
 def fetch_league_dash(
     season: str = "2020-21",
     data_path: Path = Path("../data"),
@@ -106,6 +114,7 @@ def fetch_league_dash(
         time.sleep(wait_time)
     else:
         logger.info(f"{reg_path.name} already exits; API not called")
+        regular = load_pickle(reg_path)
 
     if not playoffs_path.exists():
         logger.info(f"Retrieving playoff dashboard for {season}")
@@ -115,9 +124,16 @@ def fetch_league_dash(
         dump_pickle(playoffs, playoffs_path)
     else:
         logger.info(f"{playoffs_path.name} already exits; API not called")
+        playoffs = load_pickle(playoffs_path)
+    return regular, playoffs
 
 
-def main(season, data_path, loglevel):
+@app.route("/fetch")
+def main(
+    season: str = "2015-16",
+    data_path: Path = Path("flask_data"),
+    loglevel: str = "debug",
+):
     """
     Wrapper for fetch_league_dash to parametrize logging level
     """
@@ -128,7 +144,18 @@ def main(season, data_path, loglevel):
     handler.setLevel(numeric_level)
     logger.addHandler(handler)
 
-    fetch_league_dash(season=season, data_path=data_path)
+    if not data_path.exists():
+        data_path.mkdir(parents=True, exist_ok=True)
+
+    regular, playoffs = fetch_league_dash(season=season, data_path=data_path)
+    debug_msg = f"""
+    Data Type of regular: {type(regular)}\nLength: {len(regular)}
+    First record: {regular[0]}
+    Data Type of playoffs: {type(playoffs)}\nLength: {len(playoffs)}
+    First record: {playoffs[0]}
+    """
+    logger.info(debug_msg)
+    return debug_msg
 
 
 if __name__ == "__main__":
@@ -159,8 +186,5 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-
-    if not args.data_path.exists():
-        args.data_path.mkdir(parents=True, exist_ok=False)
     if not args.dryrun:
         main(args.season, args.data_path, args.loglevel)

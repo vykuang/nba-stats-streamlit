@@ -41,7 +41,7 @@ RUN poetry install --no-interaction --no-cache --without dev
 COPY . /app/
 
 # run the app
-ENTRYPOINT [ "poetry", "run", "python", "fetch_league.py" ]
+ENTRYPOINT [ "poetry", "run", "python", "-m", "flask", "run" ]
 # default params for our executable
 # docker run <args> will override the CMD params
-CMD [ "--data_path", "/data", "-l", "debug" ]
+CMD [ "--host", "0.0.0.0", "--port", "8080" ]

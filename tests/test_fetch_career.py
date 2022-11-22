@@ -4,7 +4,7 @@ from pathlib import Path
 from nba_api.stats.endpoints import playercareerstats
 from nba_api.stats.static import players
 
-from frontend.fetch import fetch_career
+from frontend.fetch import app
 
 
 def test_get_career_stats(monkeypatch):
@@ -37,7 +37,7 @@ def test_get_career_stats(monkeypatch):
         mock_get_json,
     )
     test_id = 2544
-    response = fetch_career.get_career_stats(player_id=test_id)
+    response = app.get_career_stats(player_id=test_id)
     assert response["mock_header"][0] == "mock1"
 
 
@@ -72,7 +72,7 @@ def test_fold_post_stats():
     merge_list = reg_season.keys()
 
     # test
-    merged = fetch_career.fold_post_stats(reg_season, post_season, merge_list, 3.0)
+    merged = app.fold_post_stats(reg_season, post_season, merge_list, 3.0)
     assert merged.keys() == merge_list
     assert merged["FGM"] == 5
     assert merged["PLAYER_ID"] == 123
@@ -85,10 +85,10 @@ def test_player_standard():
     reg = {"MIN": num / 2, "GP": num / 2}
     post = reg.copy()
 
-    assert fetch_career.player_meets_standard(reg, post, min_thd=num, gp_thd=num)
-    assert fetch_career.player_meets_standard(reg, post, min_thd=num + 1, gp_thd=num)
-    assert fetch_career.player_meets_standard(reg, post, min_thd=num, gp_thd=num + 1)
-    assert not fetch_career.player_meets_standard(reg, post, num + 1, num + 1)
+    assert app.player_meets_standard(reg, post, min_thd=num, gp_thd=num)
+    assert app.player_meets_standard(reg, post, min_thd=num + 1, gp_thd=num)
+    assert app.player_meets_standard(reg, post, min_thd=num, gp_thd=num + 1)
+    assert not app.player_meets_standard(reg, post, num + 1, num + 1)
 
 
 def test_merge_career(tmp_path, monkeypatch):
@@ -113,7 +113,7 @@ def test_merge_career(tmp_path, monkeypatch):
         return pkl
 
     monkeypatch.setattr(
-        fetch_career,
+        app,
         "load_pickle",
         mock_pickle,
     )
@@ -124,11 +124,11 @@ def test_merge_career(tmp_path, monkeypatch):
         return sample_fold
 
     monkeypatch.setattr(
-        fetch_career,
+        app,
         "fold_post_stats",
         mock_fold,
     )
-    result = fetch_career.merge_career_stats(tmp_path).to_dict(orient="dict")
+    result = app.merge_career_stats(tmp_path).to_dict(orient="dict")
 
     assert Path(tmp_path / "nba_stats.pkl").exists()
     assert result == {
@@ -148,7 +148,7 @@ def test_get_json():
         '{"SeasonTotalsRegularSeason": [1, 2], "SeasonTotalsPostSeason": [2,3]}'
     )
     # execute
-    reg, post = fetch_career.get_jsons(mock_stats)
+    reg, post = app.get_jsons(mock_stats)
 
     # assert
     assert reg == 2
@@ -167,7 +167,7 @@ def test_append_json(tmp_path):
     # diff ID, same content as test_dict
     test_dict_add = {"id2": test_dict["id"]}
     # run func
-    fetch_career.append_json(json_path, test_dict)
+    app.append_json(json_path, test_dict)
 
     # assert
     with open(json_path, "r", encoding="utf-8") as file:
@@ -175,7 +175,7 @@ def test_append_json(tmp_path):
 
     assert result == test_dict
 
-    fetch_career.append_json(json_path, test_dict_add)
+    app.append_json(json_path, test_dict_add)
 
     with open(json_path, "r", encoding="utf-8") as file:
         result = json.load(file)

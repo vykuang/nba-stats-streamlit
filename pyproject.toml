@@ -67,6 +67,7 @@ disable = [
   "invalid-sequence-index",
   "logging-fstring-interpolation",
   "invalid-name",
+  "too-few-public-methods",
 ]
 
 [tool.pytest.ini_options]
