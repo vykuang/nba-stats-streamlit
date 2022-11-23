@@ -1,5 +1,4 @@
 #! usr/bin/env python
-import argparse
 import json
 import logging
 import pickle
@@ -8,9 +7,10 @@ import sys
 import time
 from pathlib import Path
 
-from flask import Flask
+from flask import Flask, request
 from nba_api.stats.endpoints import leaguedashplayerstats
 
+# create the Flask instance
 app = Flask(__name__)
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(sys.stdout)
@@ -128,15 +128,15 @@ def fetch_league_dash(
     return regular, playoffs
 
 
-@app.route("/fetch")
-def main(
-    season: str = "2015-16",
-    data_path: Path = Path("flask_data"),
-    loglevel: str = "debug",
-):
+@app.route("/fetch", methods=["POST", "GET"])
+def main():
     """
     Wrapper for fetch_league_dash to parametrize logging level
     """
+    season = request.args.get("season", default="2015-16", type=str)
+    data_path = Path(request.args.get("data_path", default="flask_data", type=str))
+    loglevel = request.args.get("loglevel", default="debug", type=str)
+    dryrun = request.args.get("dryrun", default=0, type=bool)
     numeric_level = getattr(logging, loglevel.upper(), None)
     if not isinstance(numeric_level, int):
         raise ValueError(f"Invalid log level: {loglevel}")
@@ -147,44 +147,23 @@ def main(
     if not data_path.exists():
         data_path.mkdir(parents=True, exist_ok=True)
 
-    regular, playoffs = fetch_league_dash(season=season, data_path=data_path)
-    debug_msg = f"""
-    Data Type of regular: {type(regular)}\nLength: {len(regular)}
-    First record: {regular[0]}
-    Data Type of playoffs: {type(playoffs)}\nLength: {len(playoffs)}
-    First record: {playoffs[0]}
-    """
+    if not dryrun:
+        regular, playoffs = fetch_league_dash(season=season, data_path=data_path)
+        debug_msg = f"""
+        Data Type of regular: {type(regular)}\nLength: {len(regular)}\n
+        First record: {regular[0]}\n
+        Data Type of playoffs: {type(playoffs)}\nLength: {len(playoffs)}\n
+        First record: {playoffs[0]}\n
+        """
+    if dryrun:
+        debug_msg = f"""
+        Dry run of fetch app in flask
+        Season: \t{season}\ttype: {print(type(season))}
+        data_path: \t{data_path}\ttype: {print(type(data_path))}
+        """
     logger.info(debug_msg)
     return debug_msg
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog="Fetch NBA league dashboard")
-    parser.add_argument(
-        "--season",
-        "-s",
-        type=str,
-        default="2018-19",
-    )
-    parser.add_argument(
-        "--data_path",
-        "-p",
-        type=Path,
-        default="../data",
-    )
-    parser.add_argument(
-        "--dryrun",
-        "-d",
-        action="store_true",
-        default=False,
-    )
-    parser.add_argument(
-        "--loglevel",
-        "-l",
-        type=str.upper,
-        default="INFO",
-    )
-
-    args = parser.parse_args()
-    if not args.dryrun:
-        main(args.season, args.data_path, args.loglevel)
+    app.run(debug=True)

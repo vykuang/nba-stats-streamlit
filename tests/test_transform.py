@@ -3,4 +3,4 @@ Tests functions from transform
 """
 import pytest
 
-from frontend.fetch import transform
+from frontend.model import transform
