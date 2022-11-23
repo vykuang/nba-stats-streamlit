@@ -125,7 +125,8 @@ def fetch_league_dash(
     else:
         logger.info(f"{playoffs_path.name} already exits; API not called")
         playoffs = load_pickle(playoffs_path)
-    return regular, playoffs
+    result = dict(zip(["regular", "playoffs"], [regular, playoffs]))
+    return result
 
 
 @app.route("/fetch", methods=["POST", "GET"])
@@ -148,12 +149,14 @@ def main():
         data_path.mkdir(parents=True, exist_ok=True)
 
     if not dryrun:
-        regular, playoffs = fetch_league_dash(season=season, data_path=data_path)
+        result = fetch_league_dash(season=season, data_path=data_path)
+        regular = result["regular"]
+        playoffs = result["playoffs"]
         debug_msg = f"""
-        Data Type of regular: {type(regular)}\nLength: {len(regular)}\n
-        First record: {regular[0]}\n
-        Data Type of playoffs: {type(playoffs)}\nLength: {len(playoffs)}\n
-        First record: {playoffs[0]}\n
+        Data Type of regular: {type(regular)}\nLength: {len(regular)}
+        First record: {regular[0]}
+        Data Type of playoffs: {type(playoffs)}\nLength: {len(playoffs)}
+        First record: {playoffs[0]}
         """
     if dryrun:
         debug_msg = f"""
@@ -162,7 +165,7 @@ def main():
         data_path: \t{data_path}\ttype: {print(type(data_path))}
         """
     logger.info(debug_msg)
-    return debug_msg
+    return result
 
 
 if __name__ == "__main__":
