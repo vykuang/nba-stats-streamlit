@@ -41,7 +41,7 @@ RUN poetry install --no-interaction --no-cache --without dev
 COPY . /app/
 
 # run the app
-ENTRYPOINT [ "poetry", "run", "python", "-m", "flask", "run" ]
+ENTRYPOINT [ "poetry", "run", "python", "-m", "flask", "--app", "app", "run" ]
 # default params for our executable
 # docker run <args> will override the CMD params
 CMD [ "--host", "0.0.0.0", "--port", "8080" ]

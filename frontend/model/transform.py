@@ -264,7 +264,9 @@ def load_pickle(fp: Path) -> Any:
         raise TypeError("Expected list of dicts")
 
 
-def transform(season: str, data_path: Path, loglevel: str, overwrite: bool = False):
+def transform(
+    season: str, data_path: Path, loglevel: str = "info", overwrite: bool = False
+):
     """Loads the pickle for transformation, and stores the result"""
     numeric_level = getattr(logging, loglevel.upper(), None)
     if not isinstance(numeric_level, int):

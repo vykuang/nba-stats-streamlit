@@ -36,10 +36,14 @@ RUN poetry check
 # install dependencies
 RUN poetry install --no-interaction --no-cache --without dev
 
+EXPOSE 8081
+
 # copies src code to container
 COPY . /model/
 
 # run the app
-ENTRYPOINT [ "poetry", "run", "python" ]
+ENTRYPOINT [ "poetry", "run", "python", "-m", "flask", "--app", "app_model", "--debug", "run" ]
 
 # CMD [ "transform.py", "--season", "2018-19", "--data_path", "/data" ]
+
+CMD [ "--host", "0.0.0.0", "--port", "8081" ]

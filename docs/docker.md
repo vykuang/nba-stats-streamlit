@@ -392,6 +392,16 @@ Some disable `venv` in docker as the container is its own isolated environment, 
   - `model` responds by training and registering a new clusterer based on the newly acquired dataset
   - Responds back to `fetch`
 - `fetch` responds back to `streamlit` once dataset is fetched, and if a new model is also requested, then only after the new model is registered, following the okay from `model`
+- Cannot use relative import in my flask app, i.e. `from . import transform` is no bueno
+  - Need to convert the actual .py to a flask app
+  - Combine train and transform into one file
+- Can't seem to access the flask server for `model` once dockerized. Need to try dockerizing the `fetch` flask server and see how that works first.
+  - Hot-reloading still worked for the bind mount in debug mode
+  - never mind I just forgot to expose the port in my `run_model.sh` script
+  - What was the point of `EXPOSE` in my dockerfile then?
+  - Parameters are being received
+- Flask only accepts these `return` types:
+  > string, dict, list, tuple with headers or status, Response instance, or WSGI callable
 
 ## Tips and tricks
 
