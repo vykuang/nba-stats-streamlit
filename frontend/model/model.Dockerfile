@@ -42,7 +42,7 @@ EXPOSE 8081
 COPY . /model/
 
 # run the app
-ENTRYPOINT [ "poetry", "run", "python", "-m", "flask", "--app", "app_model", "--debug", "run" ]
+ENTRYPOINT [ "poetry", "run", "python", "-m", "flask", "--app", "model", "--debug", "run" ]
 
 # CMD [ "transform.py", "--season", "2018-19", "--data_path", "/data" ]
 

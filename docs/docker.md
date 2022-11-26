@@ -399,6 +399,9 @@ Some disable `venv` in docker as the container is its own isolated environment, 
   - Hot-reloading still worked for the bind mount in debug mode
   - never mind I just forgot to expose the port in my `run_model.sh` script
   - What was the point of `EXPOSE` in my dockerfile then?
+    - > ... does not actually publish the port. It acts as a documentation that lets docker know which port the container is listening to.
+    - `docker run <container> -p 80:80/tcp` to actually publish
+    - `-P` to publish all `EXPOSE`d ports, but the actual published ports will be different; use `docker port` to see actual mapping at runtime
   - Parameters are being received
 - Flask only accepts these `return` types:
   > string, dict, list, tuple with headers or status, Response instance, or WSGI callable

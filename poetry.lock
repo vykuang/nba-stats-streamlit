@@ -1275,6 +1275,18 @@ spelling = ["pyenchant (>=3.2,<4.0)"]
 testutils = ["gitpython (>3)"]
 
 [[package]]
+name = "pylint-pytest"
+version = "1.1.2"
+description = "A Pylint plugin to suppress pytest-related false positives."
+category = "dev"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+pylint = "*"
+pytest = ">=4.6"
+
+[[package]]
 name = "pymarkdownlnt"
 version = "0.9.7"
 description = "A GitHub Flavored Markdown compliant Markdown linter."
@@ -1867,7 +1879,7 @@ testing = ["func-timeout", "jaraco.itertools", "pytest (>=6)", "pytest-black (>=
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9.8"
-content-hash = "598e1ae14ef3129a33fa1a3a2f0057d307a5d14c98f2e1fe41a7cbfb9f9ff9bc"
+content-hash = "fb094b5ae26ca1cf0e566002277cda0ed6cf7a422e7760bdcf75e35bbfa4cb24"
 
 [metadata.files]
 alembic = [
@@ -2839,6 +2851,9 @@ PyJWT = [
 pylint = [
     {file = "pylint-2.15.2-py3-none-any.whl", hash = "sha256:cc3da458ba810c49d330e09013dec7ced5217772dec8f043ccdd34dae648fde8"},
     {file = "pylint-2.15.2.tar.gz", hash = "sha256:f63404a2547edb5247da263748771ac9a806ed1de4174cda01293c08ddbc2999"},
+]
+pylint-pytest = [
+    {file = "pylint_pytest-1.1.2-py2.py3-none-any.whl", hash = "sha256:fb20ef318081cee3d5febc631a7b9c40fa356b05e4f769d6e60a337e58c8879b"},
 ]
 pymarkdownlnt = [
     {file = "pymarkdownlnt-0.9.7-py3-none-any.whl", hash = "sha256:817ebd13b0cf9812fe63502948a12f8b332e855898458462a3b7a1fd6086531a"},

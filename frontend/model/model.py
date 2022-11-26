@@ -23,6 +23,8 @@ from sklearn.metrics import (
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
+from . import leaguedash_columns
+
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "sqlite:///mlflow.db")
 MLFLOW_EXP_NAME = os.getenv("MLFLOW_EXP_NAME", "nba-leaguedash-cluster")
 MLFLOW_REGISTERED_MODEL = os.getenv("MLFLOW_REGISTERED_MODEL", "nba-player-clusterer")
@@ -38,118 +40,6 @@ logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(sys.stdout)
 
 
-ALL_COLS = [
-    "PLAYER_NAME",
-    "NICKNAME",
-    "TEAM_ID",
-    "TEAM_ABBREVIATION",
-    "AGE",
-    "GP",
-    "W",
-    "L",
-    "W_PCT",
-    "MIN",
-    "FGM",
-    "FGA",
-    "FG_PCT",
-    "FG3M",
-    "FG3A",
-    "FG3_PCT",
-    "FTM",
-    "FTA",
-    "FT_PCT",
-    "OREB",
-    "DREB",
-    "REB",
-    "AST",
-    "TOV",
-    "STL",
-    "BLK",
-    "BLKA",
-    "PF",
-    "PFD",
-    "PTS",
-    "PLUS_MINUS",
-    "NBA_FANTASY_PTS",
-    "DD2",
-    "TD3",
-    "WNBA_FANTASY_PTS",
-    "GP_RANK",
-    "W_RANK",
-    "L_RANK",
-    "W_PCT_RANK",
-    "MIN_RANK",
-    "FGM_RANK",
-    "FGA_RANK",
-    "FG_PCT_RANK",
-    "FG3M_RANK",
-    "FG3A_RANK",
-    "FG3_PCT_RANK",
-    "FTM_RANK",
-    "FTA_RANK",
-    "FT_PCT_RANK",
-    "OREB_RANK",
-    "DREB_RANK",
-    "REB_RANK",
-    "AST_RANK",
-    "TOV_RANK",
-    "STL_RANK",
-    "BLK_RANK",
-    "BLKA_RANK",
-    "PF_RANK",
-    "PFD_RANK",
-    "PTS_RANK",
-    "PLUS_MINUS_RANK",
-    "NBA_FANTASY_PTS_RANK",
-    "DD2_RANK",
-    "TD3_RANK",
-    "WNBA_FANTASY_PTS_RANK",
-    "CFID",
-    "CFPARAMS",
-]
-
-PLAYER_BIO = set(["PLAYER_NAME", "TEAM_ABBREVIATION", "AGE"])
-MERGE_STATS = [
-    "GP",
-    "MIN",
-    "FG3M",
-    "FG3A",
-    "FTM",
-    "FTA",
-    "OREB",
-    "DREB",
-    "AST",
-    "TOV",
-    "STL",
-    "BLK",
-    "BLKA",
-    "PF",
-    "PFD",
-    "PTS",
-    "PLUS_MINUS",
-    "FG2M",
-    "FG2A",
-]
-
-DROP_STATS = [
-    "NICKNAME",
-    "TEAM_ID",
-    "W",
-    "L",
-    "FGM",
-    "FGA",
-    "REB",
-    "NBA_FANTASY_PTS",
-    "DD2",
-    "TD3",
-    "WNBA_FANTASY_PTS",
-    "CFID",
-    "CFPARAMS",
-]
-DROP_RANK_PCT = [col for col in ALL_COLS if "_RANK" in col or "_PCT" in col]
-DROP_COLS = DROP_STATS + DROP_RANK_PCT
-
-
 def feature_engineer(df: pd.DataFrame) -> pd.DataFrame:
     """Removes extraneous columns from leaguedash,
     and engineers some new features
@@ -158,7 +48,7 @@ def feature_engineer(df: pd.DataFrame) -> pd.DataFrame:
     result["FG2M"] = result["FGM"] - result["FG3M"]
     result["FG2A"] = result["FGA"] - result["FG3A"]
 
-    result = result.drop(DROP_COLS, axis=1)
+    result = result.drop(leaguedash_columns.DROP_COLS, axis=1)
     return result
 
 
@@ -189,7 +79,7 @@ def transform_leaguedash(
 
         gp_tot = player["GP"] + post_wt * post_season["GP"]
         for stat in player.index:
-            if stat not in PLAYER_BIO:
+            if stat not in leaguedash_columns.PLAYER_BIO:
                 player[stat + "_merge"] = (
                     player["GP"] / gp_tot * player[stat]
                     + post_wt * post_season["GP"] / gp_tot * post_season[stat]
@@ -199,7 +89,7 @@ def transform_leaguedash(
     logger.debug("Merging regular and post season stats...")
     # drop reg season stats after merging with post season
     merge_df = reg_df.apply(reg_post_merge, post_wt=post_wt, axis=1).drop(
-        MERGE_STATS, axis=1
+        leaguedash_columns.MERGE_STATS, axis=1
     )
     logger.info(f"Merging complete with post_wt = {post_wt:.3f}")
     logger.debug(f"Players post merge: {len(merge_df)}")
@@ -243,7 +133,7 @@ def transform_leaguedash(
 
     logger.debug("Re-ranking merged stats...")
     # only rank merged columns, so drop bio before merging
-    merge_ranks = merge_df.drop(PLAYER_BIO, axis=1).apply(
+    merge_ranks = merge_df.drop(leaguedash_columns.PLAYER_BIO, axis=1).apply(
         leaguedash_rerank, axis="index"
     )
     merge_ranks.columns = [col.replace("merge", "RANK") for col in merge_ranks.columns]

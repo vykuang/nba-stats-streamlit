@@ -37,8 +37,6 @@ repos:
           - id: black-jupyter
             language_version: python3.9
 
-
-
     - repo: local
       hooks:
           - id: pylint
@@ -46,6 +44,7 @@ repos:
             entry: pylint
             language: system
             types: [python]
+            args: [--load-plugins=pylint_pytest]
 
     - repo: https://github.com/executablebooks/mdformat
       rev: 0.7.16  # Use the ref you want to point at
