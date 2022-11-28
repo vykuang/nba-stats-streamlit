@@ -9,10 +9,20 @@ import pandas as pd
 from frontend.model import leaguedash_columns, model
 
 
-def test_load_pickle(league_pickle):
+def test_load_pickle(make_league_pickle, make_league_df):
     """Tests for loading json pickle into dataframe"""
-    res = model.load_pickle(league_pickle)
-    assert isinstance(res, pd.DataFrame)
+    reg_pkl = make_league_pickle()
+    post_pkl = make_league_pickle(regular=False)
+    reg_pkl_res = model.load_pickle(reg_pkl)
+    post_pkl_res = model.load_pickle(post_pkl)
+    test_reg_pkl = make_league_df()
+    test_post_pkl = make_league_df(regular=False)
+
+    # simply using `==` actually returns another df
+    # use .all() to confirm that the resulting df is all True
+    # specify axis; otherwise still returns series/df
+    assert (reg_pkl_res == test_reg_pkl).all(axis=None)
+    assert (post_pkl_res == test_post_pkl).all(axis=None)
 
 
 def test_feature_engineer(league_raw_df):
@@ -25,7 +35,30 @@ def test_feature_engineer(league_raw_df):
     assert not set(leaguedash_columns.DROP_COLS) & res_cols  # no intersection
 
 
+def test_reg_post_merge():
+    """
+    Tests the merging of regular and playoffs leaguedash df
+    Used in reg_df.apply()
+    """
+
+
+def test_rerank():
+    """
+    Tests the ranking func used in merge_df.apply()
+    """
+
+
+def test_meet_standard():
+    """
+    Tests whether the player filter criteria is correctly judged
+    """
+
+
 def test_transform_leaguedash(league_raw_df):
-    """Tests for correct transformation"""
+    """Tests for correct transformation
+    Acts as integration test for reg_post_merge, rerank, and meets_standard
+    """
     res = model.transform_leaguedash(reg_df=league_raw_df, post_df=league_raw_df)
+
     assert isinstance(res, pd.DataFrame)
+    assert 0

@@ -1,5 +1,7 @@
 # Pytest
 
+Developing with testing as a priority is ESSENTIAL so that whenever you make changes to the code, there's a surefire way of knowing the changes don't break the code.
+
 ## Note on `src` layout
 
 Been over this a million times but still worth it to recap.
@@ -156,7 +158,7 @@ Pytest automatically displays `WARNING` level and above logs to console.
 
 Use `--log-cli-level=DEBUG` or any other level to explicitly set the severity for that particular pytest run
 
-### Logging in general
+### Log to console
 
 To log to console, add a `streamHandler` for `sys.stdout`:
 
@@ -178,3 +180,84 @@ def foo(num: int = 5, log_level: int = logging.DEBUG):
         logger.debug(f'debug: {i}')
         logger.info(f'info: {i}')
 ```
+
+### Common practice
+
+In each module, instantiate a logger using `__name__`, and add a handler.
+
+```py
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(sys.stdout)
+```
+
+Then parametrize the level of logging via env var or CLI options in the wrapper script
+
+```py
+def app(loglevel: str = 'info'):
+    num_loglevel = getattr(logging, loglevel, None)
+
+    if not isinstance(num_loglevel, int):
+        raise ValueError(f"Invalid log level: {loglevel}")
+
+    logger.setLevel(num_loglevel)
+    handler.setLevel(num_loglevel)
+
+    logger.addHandler(handler)
+
+    # do script
+```
+
+#### Format the logger output
+
+In pytest.ini, or in pyproject.toml, customize logger output.
+
+```ini
+[tool.pytest.ini_options] # for py.toml
+[pytest] # for ini
+log_format = "%(asctime)s %(levelname)s %(message)s"
+log_date_format = "%Y-%m-%d %H:%M:%S"
+```
+
+## Validating data pipeline
+
+In order to validate the pipeline we need to make sure the transformations are doing what they're supposed to. One way is to have a mock dataset, and a mock result to confirm the function output matches the expected mock output. That means we need to generate the expected output for each step in the transformation.
+
+Use a notebook to do so interactively???
+
+## Fixtures
+
+Through using fixtures, and wanting to return the two versions of file paths for regular and post-season stat pickles/df, I came across *Factories as fixtures* design pattern that can parametrize my path fixture, without repeating code. [From docs](https://docs.pytest.org/en/7.1.x/how-to/fixtures.html#factories-as-fixtures):
+
+```py
+@pytest.fixture
+def make_customer_record():
+
+    created_records = []
+
+    def _make_customer_record(name):
+        record = models.Customer(name=name, orders=[])
+        created_records.append(record)
+        return record
+
+    yield _make_customer_record
+
+    for record in created_records:
+        record.destroy()
+
+
+def test_customer_records(make_customer_record):
+    customer_1 = make_customer_record("Lisa")
+    customer_2 = make_customer_record("Mike")
+    customer_3 = make_customer_record("Meredith")
+
+## my implementation
+@pytest.fixture
+def make_league_pickle():
+    def _make_league_pickle(season_type: str = "regular"):
+        return test_data_dir / f"leaguedash_{season_type}_2018-19.pkl"
+    return _make_league_pickle
+```
+
+This is different from actually *parametrizing* the fixtures, which repeats the tests that request those fixtures by return each variant of the fixture. [Parametrizing fixtures](https://docs.pytest.org/en/7.1.x/how-to/fixtures.html#parametrizing-fixtures)
+
+Not what I need right now, since I need both regular and post-season for the merge tests. However for others, parametrizing would work - the tests would simply run on both regular season and post.

@@ -52,85 +52,105 @@ def feature_engineer(df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
+def reg_post_merge(
+    player: pd.Series,
+    post_df: pd.DataFrame,
+    post_wt: float = 2.0,
+) -> pd.Series:
+    """Folds regular and post season stats into one via a weight coefficient
+    Scoped within transform_leaguedash to make use of post_df"""
+    # if either regular or post stats for a given player is missing, use
+    # what's present
+    # only fold if both are present
+    player = player.copy()  # avoids mutating the df as it's being iterated
+
+    post_ids = set(post_df.index)
+    if player.name in post_ids:
+        post_season = post_df.loc[player.name]
+        # initiate merge, since player is present in both reg and post
+
+    else:
+        post_season = player
+
+    gp_tot = player["GP"] + post_wt * post_season["GP"]
+    for stat in player.index:
+        if stat not in leaguedash_columns.PLAYER_BIO:
+            player[stat + "_merge"] = (
+                player["GP"] / gp_tot * player[stat]
+                + post_wt * post_season["GP"] / gp_tot * post_season[stat]
+            )
+    return player
+
+
+def leaguedash_rerank(stat: pd.Series) -> pd.Series:
+    """Ranks all the values in the given stat column.
+    Largest values will be given top ranks
+    To be used in df.apply()
+
+    Parameters
+    ---------
+
+    stat: pd.Series
+        A statistical field with numeric values to be ranked
+
+    Returns
+    --------
+
+    stat_rank: pd.Series
+        Ranking of the stat Series
+    """
+
+    # sort the values
+    sorted_stat_index = stat.sort_values(ascending=False).index
+
+    # attach a sequential index to the now sorted values
+    sorted_rank = [(rank + 1) for rank in range(len(stat.index))]
+
+    # can't for the life of me figure out how to return my desired column names
+    # rename after returning.
+    rank_series = pd.Series(
+        data=sorted_rank,
+        index=sorted_stat_index,
+        name=f"{stat.name}_RANK",
+    ).reindex(index=stat.index)
+
+    # standardize by dividing by num of players
+    rank_series /= len(stat)
+    return rank_series
+
+
+def player_meets_standard(
+    player: pd.Series, min_thd: int = 800, gp_thd: int = 40
+) -> bool:
+    """Does this player pass the minutes or games played threshold?
+    Considers the folded minutes/games played
+    """
+    return player["MIN_merge"] >= min_thd or player["GP_merge"] >= gp_thd
+
+
 def transform_leaguedash(
     reg_df: pd.DataFrame, post_df: pd.DataFrame, post_wt: float = 2.0
 ) -> pd.DataFrame:
-    """Prepares API results for clustering"""
+    """Prepares API results for clustering
+    Thinking about breaking out the nested functions into top level funcs
+    Easier unit testing
+    Add input arg of post_ids to each nested func"""
     # feature engineer
     logger.debug("feature engineering...")
     reg_df = feature_engineer(reg_df)
     post_df = feature_engineer(post_df)
     logger.info("feature engineering complete")
 
-    post_ids = set(post_df.index)
     # merge
-    def reg_post_merge(player: pd.Series, post_wt: float = 2.0) -> pd.Series:
-        """Folds regular and post season stats into one via a weight coefficient"""
-        # if either regular or post stats for a given player is missing, use
-        # what's present
-        # only fold if both are present
-        player = player.copy()  # avoids mutating the df as it's being iterated
-        if player.name in post_ids:
-            post_season = post_df.loc[player.name]
-            # initiate merge, since player is present in both reg and post
-
-        else:
-            post_season = player
-
-        gp_tot = player["GP"] + post_wt * post_season["GP"]
-        for stat in player.index:
-            if stat not in leaguedash_columns.PLAYER_BIO:
-                player[stat + "_merge"] = (
-                    player["GP"] / gp_tot * player[stat]
-                    + post_wt * post_season["GP"] / gp_tot * post_season[stat]
-                )
-        return player
-
     logger.debug("Merging regular and post season stats...")
     # drop reg season stats after merging with post season
-    merge_df = reg_df.apply(reg_post_merge, post_wt=post_wt, axis=1).drop(
-        leaguedash_columns.MERGE_STATS, axis=1
-    )
+    merge_df = reg_df.apply(
+        reg_post_merge, post_df=post_df, post_wt=post_wt, axis=1
+    ).drop(leaguedash_columns.MERGE_STATS, axis=1)
     logger.info(f"Merging complete with post_wt = {post_wt:.3f}")
     logger.debug(f"Players post merge: {len(merge_df)}")
 
     # re-rank using merged stats
-    def leaguedash_rerank(stat: pd.Series) -> pd.Series:
-        """Ranks all the values in the given stat column.
-        Largest values will be given top ranks
-        To be used in df.apply()
-
-        Parameters
-        ---------
-
-        stat: pd.Series
-            A statistical field with numeric values to be ranked
-
-        Returns
-        --------
-
-        stat_rank: pd.Series
-            Ranking of the stat Series
-        """
-
-        # sort the values
-        sorted_stat_index = stat.sort_values(ascending=False).index
-
-        # attach a sequential index to the now sorted values
-        sorted_rank = [(rank + 1) for rank in range(len(stat.index))]
-
-        # can't for the life of me figure out how to return my desired column names
-        # rename after returning.
-        rank_series = pd.Series(
-            data=sorted_rank,
-            index=sorted_stat_index,
-            name=f"{stat.name}_RANK",
-        ).reindex(index=stat.index)
-
-        # standardize by dividing by num of players
-        rank_series /= len(stat)
-        return rank_series
-
     logger.debug("Re-ranking merged stats...")
     # only rank merged columns, so drop bio before merging
     merge_ranks = merge_df.drop(leaguedash_columns.PLAYER_BIO, axis=1).apply(
@@ -147,17 +167,8 @@ def transform_leaguedash(
     logger.debug(f"Column count: {len(merge_df.columns)}")
 
     # filter for minutes and games played
-    def player_meets_standard(
-        player: pd.Series, min_thd: int = 800, gp_thd: int = 40
-    ) -> bool:
-        """Does this player pass the minutes or games played threshold?
-        Considers the folded minutes/games played
-        """
-        return player["MIN_merge"] >= min_thd or player["GP_merge"] >= gp_thd
-
     merge_df["gametime_threshold"] = merge_df.apply(player_meets_standard, axis=1)
     logger.info(f"Number of eligible players: {merge_df['gametime_threshold'].sum()}")
-
     return merge_df
 
 
