@@ -28,31 +28,56 @@ def test_load_pickle(make_league_pickle, make_league_df):
     assert (post_pkl_res == test_post_pkl).all(axis=None)
 
 
-def test_feature_engineer(make_league_df):
+def test_feature_engineer(make_league_df, make_feat_df):
     """Tests for correct removal of columns from leaguedash df
     Takes as input the result of load_pickle"""
-    res = model.feature_engineer(make_league_df)
+    # setup
+    test_feat = make_feat_df()
+
+    # execute
+    res = model.feature_engineer(make_league_df())
     res_cols = set(res.columns)
+
+    # assert
     assert isinstance(res, pd.DataFrame)
     assert set(["FG2M", "FG2A"]) <= res_cols  # subset
     assert not set(leaguedash_columns.DROP_COLS) & res_cols  # no intersection
+    assert (res == test_feat).all(axis=None)
 
 
-def test_reg_post_merge():
+def test_reg_post_merge(make_league_df, make_feat_df):
     """
     Tests the merging of regular and playoffs leaguedash df
     Used in reg_df.apply()
     """
     # setup
-    test_reg_df = make_league_df("regular")
-    test_post_df = make_league_df("playoffs")
-    test_res = make_league_df("merge")
+    test_reg_df = make_feat_df("regular")
+    test_post_df = make_feat_df("playoffs")
+    # ground truth
+    test_merge_df = make_league_df("merge")
+
+    # test
+    # merge_res = test_reg_df.apply(
+    #     model.reg_post_merge,
+    #     post_df=test_post_df,
+    #     axis=1
+    # ).drop(leaguedash_columns.MERGE_STATS, axis=1)
+    merge_res = model.reg_post_merge(test_reg_df, test_post_df)
+
+    assert (merge_res == test_merge_df).all(axis=None)
 
 
-def test_rerank():
+def test_rerank(make_league_df):
     """
     Tests the ranking func used in merge_df.apply()
     """
+    # setup
+    res = (
+        make_league_df("merge")
+        .drop(leaguedash_columns.PLAYER_BIO, axis=1)
+        .apply(model.leaguedash_rerank, axis="index")
+    )
+    res.columns = [col.replace("merge", "RANK") for col in res.columns]
 
 
 def test_meet_standard():

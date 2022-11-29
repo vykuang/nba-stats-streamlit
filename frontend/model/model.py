@@ -52,7 +52,7 @@ def feature_engineer(df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def reg_post_merge(
+def _reg_post_merge(
     player: pd.Series,
     post_df: pd.DataFrame,
     post_wt: float = 2.0,
@@ -82,7 +82,17 @@ def reg_post_merge(
     return player
 
 
-def leaguedash_rerank(stat: pd.Series) -> pd.Series:
+def reg_post_merge(reg_df, post_df, post_wt: float = 2.0) -> pd.DataFrame:
+    """Wrapper to for df.apply(_reg_post_merge)
+    This pattern can include the subsequent dropping of columns, for
+    better unit testing
+    """
+    return reg_df.apply(_reg_post_merge, post_df=post_df, post_wt=post_wt, axis=1).drop(
+        leaguedash_columns.MERGE_STATS, axis=1
+    )
+
+
+def _leaguedash_rerank(stat: pd.Series) -> pd.Series:
     """Ranks all the values in the given stat column.
     Largest values will be given top ranks
     To be used in df.apply()
@@ -119,6 +129,19 @@ def leaguedash_rerank(stat: pd.Series) -> pd.Series:
     return rank_series
 
 
+def leaguedash_rerank(merge_df: pd.DataFrame) -> pd.DataFrame:
+    """Wrapper for df.apply(_leaguedash_rerank)
+    Includes the setup of dropping player_bio columns and subsequent
+    replacement/formatting of column names, and dataframe merge
+    """
+    rerank = merge_df.drop(leaguedash_columns.PLAYER_BIO, axis=1).apply(
+        _leaguedash_rerank, axis="index"
+    )
+    rerank.columns = [col.replace("merge", "RANK") for col in rerank.columns]
+    merge_rerank = pd.concat([merge_df, rerank], axis="columns")
+    return merge_rerank
+
+
 def player_meets_standard(
     player: pd.Series, min_thd: int = 800, gp_thd: int = 40
 ) -> bool:
@@ -144,25 +167,27 @@ def transform_leaguedash(
     # merge
     logger.debug("Merging regular and post season stats...")
     # drop reg season stats after merging with post season
-    merge_df = reg_df.apply(
-        reg_post_merge, post_df=post_df, post_wt=post_wt, axis=1
-    ).drop(leaguedash_columns.MERGE_STATS, axis=1)
+    # merge_df = reg_df.apply(
+    #     reg_post_merge, post_df=post_df, post_wt=post_wt, axis=1
+    # ).drop(leaguedash_columns.MERGE_STATS, axis=1)
+    merge_df = reg_post_merge(reg_df=reg_df, post_df=post_df, post_wt=post_wt)
     logger.info(f"Merging complete with post_wt = {post_wt:.3f}")
     logger.debug(f"Players post merge: {len(merge_df)}")
 
     # re-rank using merged stats
     logger.debug("Re-ranking merged stats...")
-    # only rank merged columns, so drop bio before merging
-    merge_ranks = merge_df.drop(leaguedash_columns.PLAYER_BIO, axis=1).apply(
-        leaguedash_rerank, axis="index"
-    )
-    merge_ranks.columns = [col.replace("merge", "RANK") for col in merge_ranks.columns]
-    logger.info("Re-rank complete")
+    # # only rank merged columns, so drop bio before merging
+    # merge_ranks = merge_df.drop(leaguedash_columns.PLAYER_BIO, axis=1).apply(
+    #     leaguedash_rerank, axis="index"
+    # )
+    # merge_ranks.columns = [col.replace("merge", "RANK") for col in merge_ranks.columns]
+    # logger.info("Re-rank complete")
 
-    logger.debug(
-        f"merge_df shape: {merge_df.shape}\nmerge_rank shape: {merge_ranks.shape}"
-    )
-    merge_df = pd.concat([merge_df, merge_ranks], axis="columns")
+    # logger.debug(
+    #     f"merge_df shape: {merge_df.shape}\nmerge_rank shape: {merge_ranks.shape}"
+    # )
+    # merge_df = pd.concat([merge_df, merge_ranks], axis="columns")
+    merge_df = leaguedash_rerank(merge_df)
     logger.info("Ranks and stats merge complete")
     logger.debug(f"Column count: {len(merge_df.columns)}")
 
