@@ -11,12 +11,15 @@ from frontend.model import leaguedash_columns, model
 
 def test_load_pickle(make_league_pickle, make_league_df):
     """Tests for loading json pickle into dataframe"""
-    reg_pkl = make_league_pickle()
-    post_pkl = make_league_pickle(regular=False)
+    # setup
+    reg_pkl = make_league_pickle("regular")
+    post_pkl = make_league_pickle("playoffs")
+
+    test_reg_pkl = make_league_df("regular")
+    test_post_pkl = make_league_df("playoffs")
+    # testing
     reg_pkl_res = model.load_pickle(reg_pkl)
     post_pkl_res = model.load_pickle(post_pkl)
-    test_reg_pkl = make_league_df()
-    test_post_pkl = make_league_df(regular=False)
 
     # simply using `==` actually returns another df
     # use .all() to confirm that the resulting df is all True
@@ -25,10 +28,10 @@ def test_load_pickle(make_league_pickle, make_league_df):
     assert (post_pkl_res == test_post_pkl).all(axis=None)
 
 
-def test_feature_engineer(league_raw_df):
+def test_feature_engineer(make_league_df):
     """Tests for correct removal of columns from leaguedash df
     Takes as input the result of load_pickle"""
-    res = model.feature_engineer(league_raw_df)
+    res = model.feature_engineer(make_league_df)
     res_cols = set(res.columns)
     assert isinstance(res, pd.DataFrame)
     assert set(["FG2M", "FG2A"]) <= res_cols  # subset
@@ -40,6 +43,10 @@ def test_reg_post_merge():
     Tests the merging of regular and playoffs leaguedash df
     Used in reg_df.apply()
     """
+    # setup
+    test_reg_df = make_league_df("regular")
+    test_post_df = make_league_df("playoffs")
+    test_res = make_league_df("merge")
 
 
 def test_rerank():
@@ -54,11 +61,13 @@ def test_meet_standard():
     """
 
 
-def test_transform_leaguedash(league_raw_df):
+def test_transform_leaguedash(make_league_df):
     """Tests for correct transformation
     Acts as integration test for reg_post_merge, rerank, and meets_standard
     """
-    res = model.transform_leaguedash(reg_df=league_raw_df, post_df=league_raw_df)
+    res = model.transform_leaguedash(
+        reg_df=make_league_df("regular"), post_df=make_league_df("playoffs")
+    )
 
     assert isinstance(res, pd.DataFrame)
     assert 0

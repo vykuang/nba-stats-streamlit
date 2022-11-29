@@ -24,9 +24,10 @@ A basic end-to-end deployment of a simple model using data from NBA stats.
 
 - sklearn trains our model
 - mlflow tracks experiments
-- Flask acts as basic backend (could sub gunicorn if things get serious)
+- Flask acts as basic backend (streamlit will request for the different resources via this backend)
 - Streamlit as frontend
 - poetry manages dependencies
+- docker containerizes each service
 
 ## What will streamlit do?
 
