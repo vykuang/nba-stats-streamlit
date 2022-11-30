@@ -85,21 +85,27 @@ def test_player_standard(make_league_df):
     # setup
     test_rerank_df = make_league_df("rerank")
     test_gametime_df = make_league_df("gametime")
-    num = 20
-    player = {"MIN_merge": num, "GP_merge": num}
+    TEST_NUM = 20
+    player = {"MIN_merge": TEST_NUM, "GP_merge": TEST_NUM}
 
     # execute
     res_gametime = model.player_meets_standard(test_rerank_df)
     # pylint: disable=W0212
     # both pass
-    assert model._player_meets_standard(player=player, min_thd=num, gp_thd=num)
+    assert model._player_meets_standard(
+        player=player, min_thd=TEST_NUM, gp_thd=TEST_NUM
+    )
     # only GP pass
-    assert model._player_meets_standard(player=player, min_thd=num + 1, gp_thd=num)
+    assert model._player_meets_standard(
+        player=player, min_thd=TEST_NUM + 1, gp_thd=TEST_NUM
+    )
     # only MIN pass
-    assert model._player_meets_standard(player=player, min_thd=num, gp_thd=num + 1)
+    assert model._player_meets_standard(
+        player=player, min_thd=TEST_NUM, gp_thd=TEST_NUM + 1
+    )
     # neither pass
     assert not model._player_meets_standard(
-        player=player, min_thd=num + 1, gp_thd=num + 1
+        player=player, min_thd=TEST_NUM + 1, gp_thd=TEST_NUM + 1
     )
     # test whole df
     # pylint: enable=W0212

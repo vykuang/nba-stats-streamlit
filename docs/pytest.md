@@ -261,3 +261,13 @@ def make_league_pickle():
 This is different from actually *parametrizing* the fixtures, which repeats the tests that request those fixtures by return each variant of the fixture. [Parametrizing fixtures](https://docs.pytest.org/en/7.1.x/how-to/fixtures.html#parametrizing-fixtures)
 
 Not what I need right now, since I need both regular and post-season for the merge tests. However for others, parametrizing would work - the tests would simply run on both regular season and post.
+
+## pytest-flask
+
+The plugin `pytest-flask` provides useful fixtures in the form of flask contexts within which to test our flask application.
+
+[pytest-flask docs here](https://pytest-flask.readthedocs.io/en/latest/features.html)
+
+However I would want to integrate docker in the flask functional tests too, since ultimately the backend will run in the containers, not local env
+
+## pytest-docker

@@ -73,5 +73,10 @@ disable = [
 ]
 
 [tool.pytest.ini_options]
+addopts = "--strict-markers"
 log_format = "%(asctime)s %(levelname)s %(message)s"
 log_date_format = "%Y-%m-%d %H:%M:%S"
+markers = [
+    "api: makes actual API requests",
+]
+norecursedirs = "archive"

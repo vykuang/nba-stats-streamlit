@@ -6,6 +6,7 @@
 *.csv
 mlruns/
 *.db
+archive/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
