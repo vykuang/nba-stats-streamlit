@@ -78,19 +78,6 @@ def test_fold_post_stats():
     assert merged["PLAYER_ID"] == 123
 
 
-def test_player_standard():
-    """Tests the player check function"""
-    # setup
-    num = 20
-    reg = {"MIN": num / 2, "GP": num / 2}
-    post = reg.copy()
-
-    assert app.player_meets_standard(reg, post, min_thd=num, gp_thd=num)
-    assert app.player_meets_standard(reg, post, min_thd=num + 1, gp_thd=num)
-    assert app.player_meets_standard(reg, post, min_thd=num, gp_thd=num + 1)
-    assert not app.player_meets_standard(reg, post, num + 1, num + 1)
-
-
 def test_merge_career(tmp_path, monkeypatch):
     """Tests merge_career_stats by monkeypatching the various subfuncs and substituting in
     Test results

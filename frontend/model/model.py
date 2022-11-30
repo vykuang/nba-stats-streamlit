@@ -148,6 +148,7 @@ def player_meets_standard(
     """Does this player pass the minutes or games played threshold?
     Considers the folded minutes/games played
     """
+    logger.debug(f"min merge: {player['MIN_merge']}, min_thd: {min_thd}")
     return player["MIN_merge"] >= min_thd or player["GP_merge"] >= gp_thd
 
 

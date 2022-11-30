@@ -1,7 +1,6 @@
 """
 Unit tests for model.py
-Requires a sample API json for testing
-
+Requires sample API json for testing
 """
 
 import pandas as pd
@@ -72,27 +71,42 @@ def test_rerank(make_league_df):
     Tests the ranking func used in merge_df.apply()
     """
     # setup
-    res = (
-        make_league_df("merge")
-        .drop(leaguedash_columns.PLAYER_BIO, axis=1)
-        .apply(model.leaguedash_rerank, axis="index")
+    test_rerank_df = make_league_df("rerank")
+    test_merge_df = make_league_df("merge")
+    # execute
+    res = model.leaguedash_rerank(test_merge_df)
+
+    # assert
+    assert (res == test_rerank_df).all(axis=None)
+
+
+def test_player_standard():
+    """Tests the player check function"""
+    # setup
+    num = 20
+    player = {"MIN_merge": num, "GP_merge": num}
+
+    # both pass
+    assert model.player_meets_standard(player=player, min_thd=num, gp_thd=num)
+    # only GP pass
+    assert model.player_meets_standard(player=player, min_thd=num + 1, gp_thd=num)
+    # only MIN pass
+    assert model.player_meets_standard(player=player, min_thd=num, gp_thd=num + 1)
+    # neither pass
+    assert not model.player_meets_standard(
+        player=player, min_thd=num + 1, gp_thd=num + 1
     )
-    res.columns = [col.replace("merge", "RANK") for col in res.columns]
-
-
-def test_meet_standard():
-    """
-    Tests whether the player filter criteria is correctly judged
-    """
 
 
 def test_transform_leaguedash(make_league_df):
     """Tests for correct transformation
     Acts as integration test for reg_post_merge, rerank, and meets_standard
     """
+    test_transform_df = make_league_df("transform")
     res = model.transform_leaguedash(
         reg_df=make_league_df("regular"), post_df=make_league_df("playoffs")
     )
 
+    # assert
     assert isinstance(res, pd.DataFrame)
-    assert 0
+    assert (res == test_transform_df).all(axis=None)

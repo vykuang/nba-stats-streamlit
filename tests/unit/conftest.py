@@ -44,10 +44,9 @@ def make_league_df(test_data_dir):
 
     def _make_league_df(season_type: str = "regular") -> pd.DataFrame:
         """Loads and returns dataframe based on string input
-        Accepts {"regular", "playoffs", "merge"}"""
+        Accepts {"regular", "playoffs", "merge", "rerank", "transform"}"""
         df_path = test_data_dir / f"test_{season_type}_df.pkl"
-        with open(df_path, "rb") as pkl:
-            return pickle.load(pkl)
+        return load_pickle(df_path)
 
     return _make_league_df
 
