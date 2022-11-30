@@ -142,7 +142,7 @@ def leaguedash_rerank(merge_df: pd.DataFrame) -> pd.DataFrame:
     return merge_rerank
 
 
-def player_meets_standard(
+def _player_meets_standard(
     player: pd.Series, min_thd: int = 800, gp_thd: int = 40
 ) -> bool:
     """Does this player pass the minutes or games played threshold?
@@ -150,6 +150,18 @@ def player_meets_standard(
     """
     logger.debug(f"min merge: {player['MIN_merge']}, min_thd: {min_thd}")
     return player["MIN_merge"] >= min_thd or player["GP_merge"] >= gp_thd
+
+
+def player_meets_standard(
+    df: pd.DataFrame, min_thd: int = 800, gp_thd: int = 40
+) -> bool:
+    """
+    Wrapper for df.apply(_player_meets_standard, ...)
+    """
+    df["gametime_threshold"] = df.apply(
+        _player_meets_standard, min_thd=min_thd, gp_thd=gp_thd, axis=1
+    )
+    return df
 
 
 def transform_leaguedash(
@@ -193,7 +205,7 @@ def transform_leaguedash(
     logger.debug(f"Column count: {len(merge_df.columns)}")
 
     # filter for minutes and games played
-    merge_df["gametime_threshold"] = merge_df.apply(player_meets_standard, axis=1)
+    merge_df = player_meets_standard(merge_df, min_thd=800, gp_thd=40)
     logger.info(f"Number of eligible players: {merge_df['gametime_threshold'].sum()}")
     return merge_df
 

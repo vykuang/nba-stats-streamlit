@@ -80,29 +80,37 @@ def test_rerank(make_league_df):
     assert (res == test_rerank_df).all(axis=None)
 
 
-def test_player_standard():
+def test_player_standard(make_league_df):
     """Tests the player check function"""
     # setup
+    test_rerank_df = make_league_df("rerank")
+    test_gametime_df = make_league_df("gametime")
     num = 20
     player = {"MIN_merge": num, "GP_merge": num}
 
+    # execute
+    res_gametime = model.player_meets_standard(test_rerank_df)
+    # pylint: disable=W0212
     # both pass
-    assert model.player_meets_standard(player=player, min_thd=num, gp_thd=num)
+    assert model._player_meets_standard(player=player, min_thd=num, gp_thd=num)
     # only GP pass
-    assert model.player_meets_standard(player=player, min_thd=num + 1, gp_thd=num)
+    assert model._player_meets_standard(player=player, min_thd=num + 1, gp_thd=num)
     # only MIN pass
-    assert model.player_meets_standard(player=player, min_thd=num, gp_thd=num + 1)
+    assert model._player_meets_standard(player=player, min_thd=num, gp_thd=num + 1)
     # neither pass
-    assert not model.player_meets_standard(
+    assert not model._player_meets_standard(
         player=player, min_thd=num + 1, gp_thd=num + 1
     )
+    # test whole df
+    # pylint: enable=W0212
+    assert (res_gametime == test_gametime_df).all(axis=None)
 
 
 def test_transform_leaguedash(make_league_df):
     """Tests for correct transformation
     Acts as integration test for reg_post_merge, rerank, and meets_standard
     """
-    test_transform_df = make_league_df("transform")
+    test_transform_df = make_league_df("gametime")
     res = model.transform_leaguedash(
         reg_df=make_league_df("regular"), post_df=make_league_df("playoffs")
     )
