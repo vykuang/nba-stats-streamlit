@@ -163,7 +163,9 @@ def main():
         Dry run of fetch app in flask
         Season: \t{season}\ttype: {print(type(season))}
         data_path: \t{data_path}\ttype: {print(type(data_path))}
+        loglevel: \t{loglevel}
         """
+        result = request.args
     logger.info(debug_msg)
     return result
 
