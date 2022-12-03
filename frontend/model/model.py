@@ -274,6 +274,7 @@ def run_transform():
     data_path = Path(request.args.get("data_path", default="flask_data", type=str))
     loglevel = request.args.get("loglevel", default="debug", type=str)
     overwrite = request.args.get("overwrite", default=0, type=bool)
+    dryrun = request.args.get("dryrun", default=0, type=bool)
     debug_msg = f"""
     season:\t\t{season}
     data_path:\t\t{data_path}
@@ -281,9 +282,13 @@ def run_transform():
     """
     logger.info(debug_msg)
     print(debug_msg)
-    return transform(
-        season=season, data_path=data_path, loglevel=loglevel, overwrite=overwrite
-    )
+    if not dryrun:
+        result = transform(
+            season=season, data_path=data_path, loglevel=loglevel, overwrite=overwrite
+        )
+    else:
+        result = request.args
+    return result
 
 
 def score_cluster(

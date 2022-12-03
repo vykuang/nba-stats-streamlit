@@ -4,47 +4,60 @@ pytest fixtures runs the local flask backend for these tests to run against
 """
 
 import json
-import logging
 
-import requests
-
-# from frontend.fetch import fetch
+import pytest
+from flask import request
 
 
-def test_flask_fetch(client, tmp_path):
-    """Tests for arguments being properly passed to flask"""
-    # setup; encode in str for later comparison
-    season = "1000-1001"
-    data_path = str(tmp_path)
-    loglevel = "debug"
-    dryrun = "1"
-    query_string = {
-        "data_path": data_path,
-        "dryrun": dryrun,
-        "loglevel": loglevel,
-        "season": season,
-    }
-    # execute
-    with client("fetch") as c:
-        response = c.get(
+@pytest.mark.parametrize(
+    ("flask_service", "route", "query_string"),
+    (
+        (
+            "fetch",
             "/fetch",
-            query_string=query_string,
-        )
-    # fetch_url = f"http://localhost:8080/fetch?dryrun={dryrun}&season={season}&data_path={data_path}&loglevel={loglevel}"
-    # response = requests.get(fetch_url, timeout=5)
+            {
+                "season": "1000-1001",
+                "loglevel": "debug",
+                "dryrun": "1",
+            },
+        ),
+        (
+            "model",
+            "/transform",
+            {
+                "season": "2015-16",
+                "loglevel": "debug",
+                "dryrun": "1",
+            },
+        ),
+    ),
+)
+def test_flask_request(client, tmp_path, flask_service, route, query_string):
+    """
+    GIVEN the flask apps are running
+    WHEN a client makes a request to the flask apps
+    THEN the apps should receive the intended arguments
+    """
+    query_string.update({"data_path": tmp_path})
+    # GIVEN
+    with client(flask_service) as c:
+        # WHEN
+        response = c.get(route, query_string=query_string)
+        assert response.status_code == 200
+        # THEN
+        # request needs app context
+        for item in query_string:
+            assert request.args[item] == str(query_string[item])
+
     request_echo = json.loads(response.data)
     assert request_echo == query_string
 
 
-def test_flask_transform():
+def test_flask_transform(client):
     """
-    Test the transformation step in flask context
+    GIVEN app_model is up, and leaguedash.pkl are in data_path
+    WHEN client GETs request to "transform"
+    THEN app_model transforms the .pkl to modelling-grade input
     """
-    # setup
-    season = "2018-19"
-    data_path = "/data"
-    loglevel = "debug"
-    fetch_url = f"http://localhost:8081/transform?season={season}&data_path={data_path}&loglevel={loglevel}"
-    response = requests.get(fetch_url, timeout=5)
-    logging.info(response)
-    assert False
+    # with client("model") as c:
+    #     response = c.get()
