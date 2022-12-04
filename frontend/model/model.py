@@ -339,8 +339,7 @@ def model_search(data: pd.DataFrame, num_trials: int = 10) -> Trials:
 
     data
         DataFrame, or numpy 2D array with row-wise samples
-    num_trials
-        int
+    num_trials: int
         Number of trials for hyperopt, for each model type
 
     Returns:
@@ -474,7 +473,7 @@ def find_best_model() -> str:
     return best_runs[0].info.run_id
 
 
-def register_model(run_id: str) -> mlflow.entities.model_registry.ModelVersion:
+def register_model(run_id: str) -> dict:
     """
     Register the model and promote to production stage
     """
@@ -519,12 +518,20 @@ def register_model(run_id: str) -> mlflow.entities.model_registry.ModelVersion:
                 archive_existing_versions=True,
             )
         # ModelVersion of the registered model
-        return model_vers
+        model_info = {
+            "run_id": model_vers.run_id,
+            "source": model_vers.source,
+        }
     else:
         logger.info(
             f"Previous model (run_id:{run_id}) is still the best performing, no new versions made."
         )
-        return None
+        model_info = {
+            "run_id": run_id_prev,
+            "source": latest_vers[-1].source,
+        }
+    # changed return to dict to satisfy flask requirements
+    return model_info
 
 
 def train(
@@ -532,7 +539,7 @@ def train(
     max_evals: int,
     season: str,
     loglevel: str = "INFO",
-):
+) -> dict:
     """Script to run the functions"""
     num_loglevel = getattr(logging, loglevel, None)
 
@@ -557,9 +564,10 @@ def train(
     run_id = find_best_model()
 
     logger.info("Registering model")
-    model_vers = register_model(run_id)
-    if model_vers:
-        logger.info(f"Registered model meta info:\n{model_vers}")
+    model_info = register_model(run_id)
+    logger.info(f"Registered model meta info:\n{model_info}")
+
+    return model_info
 
 
 @app_model.route("/model")
@@ -575,5 +583,5 @@ def run_model():
     max_evals:\t\t{max_evals}
     loglevel:\t\t{loglevel}
     """
-    logger.info(debug_msg)
+    logger.debug(debug_msg)
     return train(data_path=data_path, max_evals=max_evals, season=season)

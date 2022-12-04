@@ -405,6 +405,15 @@ Some disable `venv` in docker as the container is its own isolated environment, 
   - Parameters are being received
 - Flask only accepts these `return` types:
   > string, dict, list, tuple with headers or status, Response instance, or WSGI callable
+- Testing implemented for flask
+- Implement flask app for `/model`, and test against running docker image of mlflow
+  - `pytest-docker` to set up the mlflow container?
+  - should `monkeypatch` replace mlflow so we can isolate `model` during testing?
+- Integration test to simulate calls from `streamlit`:
+  - fetch
+  - transform
+  - model
+- Docker image for streamlit that does what we scoped in the above test
 
 ## Tips and tricks
 
