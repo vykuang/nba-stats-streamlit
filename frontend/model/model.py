@@ -250,21 +250,21 @@ def transform(
             Exiting
             """
         )
-        return True
 
-    logger.info(f"Loading from {data_path.resolve()}")
-    reg_df = load_pickle(reg_pkl)
-    post_df = load_pickle(post_pkl)
+    else:
+        logger.info(f"Loading from {data_path.resolve()}")
+        reg_df = load_pickle(reg_pkl)
+        post_df = load_pickle(post_pkl)
 
-    logger.debug("Pickles loaded")
-    logger.debug(f"Loaded {len(reg_df)} records from reg_pkl")
-    logger.debug(f"Loaded {len(post_df)} records from post_pkl")
+        logger.debug("Pickles loaded")
+        logger.debug(f"Loaded {len(reg_df)} records from reg_pkl")
+        logger.debug(f"Loaded {len(post_df)} records from post_pkl")
 
-    merge_df = transform_leaguedash(reg_df, post_df)
+        merge_df = transform_leaguedash(reg_df, post_df)
 
-    dump_pickle(merge_df, merge_pkl)
-    logger.info(f"Results saved to {merge_pkl.resolve()}")
-    return False
+        dump_pickle(merge_df, merge_pkl)
+        logger.info(f"Results saved to {merge_pkl.resolve()}")
+    return str(merge_pkl)
 
 
 @app_model.route("/transform")

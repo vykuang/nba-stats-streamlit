@@ -270,6 +270,8 @@ The plugin `pytest-flask` provides useful fixtures in the form of flask contexts
 
 But flask itself already provides good documentation and tools for testing: [docs here](https://flask.palletsprojects.com/en/2.2.x/tutorial/tests/)
 
+Specifically, `app.test_client()` and `app.test_cli_runner` are essential for testing in flask.
+
 However I would want to integrate docker in the flask functional tests too, since ultimately the backend will run in the containers, not local env
 
 ## pytest-docker

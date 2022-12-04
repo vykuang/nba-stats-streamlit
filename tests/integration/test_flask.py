@@ -53,11 +53,25 @@ def test_flask_request(client, tmp_path, flask_service, route, query_string):
     assert request_echo == query_string
 
 
-def test_flask_transform(client):
+def test_flask_transform(client, test_data_dir, make_league_df, load_pickle):
     """
     GIVEN app_model is up, and leaguedash.pkl are in data_path
     WHEN client GETs request to "transform"
     THEN app_model transforms the .pkl to modelling-grade input
     """
-    # with client("model") as c:
-    #     response = c.get()
+
+    query_string = {
+        "data_path": str(test_data_dir),
+        "season": "2018-19",
+        "overwrite": "1",
+    }
+    test_transform_df = make_league_df("gametime")
+    response = client("model").get(
+        "/transform",
+        query_string=query_string,
+    )
+    assert response.status_code == 200
+
+    res_fp = test_data_dir / "leaguedash_merge_2018-19.pkl"
+    res_transform_df = load_pickle(res_fp)
+    assert (test_transform_df == res_transform_df).all(axis=None)

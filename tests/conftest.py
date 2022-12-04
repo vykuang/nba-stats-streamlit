@@ -8,7 +8,7 @@ import pytest
 @pytest.fixture
 def test_data_dir() -> Path:
     """Returns the test data path"""
-    return Path(__file__).parents[1] / "data"
+    return Path(__file__).parent / "data"
 
 
 @pytest.fixture
@@ -26,16 +26,20 @@ def make_league_pickle(test_data_dir):
     return _make_league_pickle
 
 
-def load_pickle(fp: Path):
-    """Loads the pickle"""
-    with open(fp, "rb") as f_in:
-        res = pickle.load(f_in)
+@pytest.fixture
+def load_pickle():
+    def _load_pickle(fp: Path):
+        """Loads the pickle"""
+        with open(fp, "rb") as f_in:
+            res = pickle.load(f_in)
 
-    return res
+        return res
+
+    return _load_pickle
 
 
 @pytest.fixture
-def make_league_df(test_data_dir):
+def make_league_df(test_data_dir, load_pickle):
     """Factory fixture
     Returns a function which returns the pre-pickled results of the leaguedash
     dataframe based on argument
@@ -52,7 +56,7 @@ def make_league_df(test_data_dir):
 
 
 @pytest.fixture
-def make_feat_df(test_data_dir):
+def make_feat_df(test_data_dir, load_pickle):
     """
     Returns a function that can return either the feature engineered
     regular or post df
