@@ -74,7 +74,7 @@ def load_pickle(fp: Path) -> dict:
 def fetch_league_dash(
     season: str = "2020-21",
     data_path: Path = Path("../data"),
-) -> None:
+) -> dict:
     """Calls stats.nba.com/stats/leaguedashplayerstats for the specified season,
     requesting both regular season and playoffs stats. Stores results as a pickle
     in data_path
@@ -89,7 +89,9 @@ def fetch_league_dash(
 
     Returns
     -------
-    None
+    result: dict, {'regular', 'playoffs'}
+        dict of the two season-segment stats
+
     """
     reg_path = data_path / f"leaguedash_regular_{season}.pkl"
     playoffs_path = data_path / f"leaguedash_playoffs_{season}.pkl"
@@ -165,6 +167,7 @@ def main():
         data_path: \t{data_path}\ttype: {print(type(data_path))}
         loglevel: \t{loglevel}
         """
+        # multi-dict
         result = request.args
     logger.info(debug_msg)
     return result

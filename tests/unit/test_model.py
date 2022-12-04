@@ -2,10 +2,12 @@
 Unit tests for model.py
 Requires sample API json for testing
 """
-
 import pandas as pd
+import pytest
 
 from frontend.model import leaguedash_columns, model
+
+PLAYTIME_TEST_NUM = 20
 
 
 def test_load_pickle(make_league_pickle, make_league_df):
@@ -80,35 +82,34 @@ def test_rerank(make_league_df):
     assert (res == test_rerank_df).all(axis=None)
 
 
-def test_player_standard(make_league_df):
+@pytest.mark.parametrize(
+    ("min_thd", "gp_thd"),
+    (
+        (PLAYTIME_TEST_NUM, PLAYTIME_TEST_NUM),  # both true
+        (PLAYTIME_TEST_NUM + 1, PLAYTIME_TEST_NUM),  # gp true
+        (PLAYTIME_TEST_NUM, PLAYTIME_TEST_NUM + 1),  # minutes true
+        pytest.param(
+            PLAYTIME_TEST_NUM + 1, PLAYTIME_TEST_NUM + 1, marks=pytest.mark.xfail
+        ),  # should fail
+    ),
+)
+def test_player_standard(min_thd, gp_thd):
     """Tests the player check function"""
+
+    player = {"MIN_merge": PLAYTIME_TEST_NUM, "GP_merge": PLAYTIME_TEST_NUM}
+    # pylint: disable=W0212
+    assert model._player_meets_standard(player=player, min_thd=min_thd, gp_thd=gp_thd)
+    # pylint: enable=W0212
+
+
+def test_gametime_filter(make_league_df):
+    """Tests the player filter df matches expectation"""
     # setup
     test_rerank_df = make_league_df("rerank")
     test_gametime_df = make_league_df("gametime")
-    TEST_NUM = 20
-    player = {"MIN_merge": TEST_NUM, "GP_merge": TEST_NUM}
-
     # execute
     res_gametime = model.player_meets_standard(test_rerank_df)
-    # pylint: disable=W0212
-    # both pass
-    assert model._player_meets_standard(
-        player=player, min_thd=TEST_NUM, gp_thd=TEST_NUM
-    )
-    # only GP pass
-    assert model._player_meets_standard(
-        player=player, min_thd=TEST_NUM + 1, gp_thd=TEST_NUM
-    )
-    # only MIN pass
-    assert model._player_meets_standard(
-        player=player, min_thd=TEST_NUM, gp_thd=TEST_NUM + 1
-    )
-    # neither pass
-    assert not model._player_meets_standard(
-        player=player, min_thd=TEST_NUM + 1, gp_thd=TEST_NUM + 1
-    )
     # test whole df
-    # pylint: enable=W0212
     assert (res_gametime == test_gametime_df).all(axis=None)
 
 

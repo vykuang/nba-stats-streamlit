@@ -75,3 +75,5 @@ def test_flask_transform(client, test_data_dir, make_league_df, load_pickle):
     res_fp = test_data_dir / "leaguedash_merge_2018-19.pkl"
     res_transform_df = load_pickle(res_fp)
     assert (test_transform_df == res_transform_df).all(axis=None)
+    # removes the resulting merge.pkl
+    res_fp.unlink()

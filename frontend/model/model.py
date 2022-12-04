@@ -230,7 +230,7 @@ def load_pickle(fp: Path) -> Any:
 
 def transform(
     season: str, data_path: Path, loglevel: str = "info", overwrite: bool = False
-):
+) -> str:
     """Loads the pickle for transformation, and stores the result"""
     numeric_level = getattr(logging, loglevel.upper(), None)
     if not isinstance(numeric_level, int):
@@ -283,10 +283,12 @@ def run_transform():
     logger.info(debug_msg)
     print(debug_msg)
     if not dryrun:
+        # returns str(Path)
         result = transform(
             season=season, data_path=data_path, loglevel=loglevel, overwrite=overwrite
         )
     else:
+        # special dict of passed args
         result = request.args
     return result
 
