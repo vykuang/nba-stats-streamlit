@@ -125,3 +125,16 @@ def test_transform_leaguedash(make_league_df):
     # assert
     assert isinstance(res, pd.DataFrame)
     assert (res == test_transform_df).all(axis=None)
+
+
+def test_train_model(test_data_dir, mock_env_mlflow):
+    """Tests the model training via local mlflow"""
+    season = "test"
+    data_path = test_data_dir
+    max_evals = 2
+    loglevel = "DEBUG"
+    res = model.train(
+        data_path=data_path, max_evals=max_evals, season=season, loglevel=loglevel
+    )
+    print(res)
+    assert False

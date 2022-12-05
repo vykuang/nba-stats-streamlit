@@ -27,3 +27,14 @@ def make_feat_df(test_data_dir, load_pickle):
         return load_pickle(fp)
 
     return _make_feat_df
+
+
+@pytest.fixture
+def mock_env_mlflow(monkeypatch, tmp_path):
+    """Sets MLflow env vars to test state"""
+    monkeypatch.setenv(
+        "MLFLOW_TRACKING_URI", f"sqlite:///{str(tmp_path / 'mlflow.db')}"
+    )
+    monkeypatch.setenv("MLFLOW_EXP_NAME", "pytest")
+    monkeypatch.setenv("MLFLOW_REGISTERED_MODEL", "pytest-clusterer")
+    monkeypatch.setenv("MLFLOW_ARTIFACT_PATH", "pytest-model")

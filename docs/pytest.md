@@ -275,3 +275,29 @@ Specifically, `app.test_client()` and `app.test_cli_runner` are essential for te
 However I would want to integrate docker in the flask functional tests too, since ultimately the backend will run in the containers, not local env
 
 ## pytest-docker
+
+Uses docker-compose to spin up container fixtures
+
+## pytest-mlflow
+
+This plugin doesn't actually exist, and preliminary searches for testing re: mlflow has been bare.
+
+Idea: I can still test the underlying test functions if I set up a local `mlflow.db` and `./mlruns` folder as the tracking URI and artifact root. I may not be testing against a remote tracking server, but this way allows me to continue unit testing as normal.
+
+Re-use the `test_gametime_df.pkl` as the test input for my model unit tests. `/model` takes these args:
+
+- `season`
+- `data_path`
+- `loglevel`
+- `max_evals`
+
+In addition, set these environment vars via `monkeypatch.setenv`:
+
+- `MLFLOW_TRACKING_URI=tmp_path / mlflow.db`
+- `MLFLOW_EXP_NAME=test`
+- `MLFLOW_REGISTERED_MODEL=test-clusterer`
+- `MLFLOW_ARTIFACT_PATH=test_model`
+
+Conversely, test absence of or incorrect env vars with `monkeypatch.delenv`
+
+Initial tests did not successfully set the test environment vars
