@@ -1,4 +1,7 @@
+import os
+
 import pytest
+from mlflow import MlflowClient
 
 
 @pytest.fixture
@@ -35,6 +38,18 @@ def mock_env_mlflow(monkeypatch, tmp_path):
     monkeypatch.setenv(
         "MLFLOW_TRACKING_URI", f"sqlite:///{str(tmp_path / 'mlflow.db')}"
     )
+    monkeypatch.setenv(
+        "MLFLOW_REGISTRY_URI", f"sqlite:///{str(tmp_path / 'mlflow.db')}"
+    )
     monkeypatch.setenv("MLFLOW_EXP_NAME", "pytest")
     monkeypatch.setenv("MLFLOW_REGISTERED_MODEL", "pytest-clusterer")
     monkeypatch.setenv("MLFLOW_ARTIFACT_PATH", "pytest-model")
+
+
+@pytest.fixture
+def mock_mlflow_client(mock_env_mlflow):
+    mock_client = MlflowClient(
+        tracking_uri=os.getenv("MLFLOW_TRACKING_URI"),
+        registry_uri=os.getenv("MLFLOW_REGISTRY_URI"),
+    )
+    return mock_client

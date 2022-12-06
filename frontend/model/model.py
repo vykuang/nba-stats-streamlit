@@ -25,6 +25,7 @@ from sklearn.preprocessing import StandardScaler
 
 from . import leaguedash_columns
 
+MLFLOW_REGISTRY_URI = os.getenv("MLFLOW_REGISTRY_URI", "sqlite:///mlflow.db")
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "sqlite:///mlflow.db")
 MLFLOW_EXP_NAME = os.getenv("MLFLOW_EXP_NAME", "nba-leaguedash-cluster")
 MLFLOW_REGISTERED_MODEL = os.getenv("MLFLOW_REGISTERED_MODEL", "nba-player-clusterer")
@@ -477,9 +478,7 @@ def register_model(run_id: str) -> dict:
     """
     Register the model and promote to production stage
     """
-    ## register
-    # /model comes from .log_model path
-    # does the model exist?
+    logger.info(f"register_model - Mlflow tracking URI: {MLFLOW_TRACKING_URI}")
     run_id_prev = None
     # note the single quote around the search value
     models = client.search_model_versions(f"name='{MLFLOW_REGISTERED_MODEL}'")
@@ -490,16 +489,36 @@ def register_model(run_id: str) -> dict:
         logger.info(latest_vers)
         run_id_prev = latest_vers[-1].run_id
 
+    # register new version only if performance has improved
     if run_id != run_id_prev:
         # model_vers contains meta_data of the registered model,
         # e.g. timestamps, source, tags, desc
-        # doc:
         # https://mlflow.org/docs/latest/python_api/mlflow.entities.html#mlflow.entities.model_registry.ModelVersion
         model_uri = f"runs:/{run_id}/{MLFLOW_ARTIFACT_PATH}"
-        model_vers = mlflow.register_model(
-            model_uri,
-            MLFLOW_REGISTERED_MODEL,
+
+        if not models:
+            logger.info("No existing model in registry; creating new model")
+            model_vers = client.create_registered_model(MLFLOW_REGISTERED_MODEL)
+
+        logger.info(f"Registering new model version for {MLFLOW_REGISTERED_MODEL}")
+        model_vers = client.create_model_version(  # can it create new version if there is none prior?
+            source=model_uri,
+            name=MLFLOW_REGISTERED_MODEL,
+            run_id=run_id,
         )
+
+        ## promote
+        client.transition_model_version_stage(
+            name=MLFLOW_REGISTERED_MODEL,
+            version=model_vers.version,
+            stage="Production",
+            archive_existing_versions=True,
+        )
+        # ModelVersion of the registered model
+        model_info = {
+            "run_id": model_vers.run_id,
+            "source": model_vers.source,
+        }
         # model_vers is NOT SUBSCRIPTABLE. Use the attributes given, e.g. run_id
         logger.info(
             f"""
@@ -507,21 +526,6 @@ def register_model(run_id: str) -> dict:
             source:\t {model_vers.source}
             """
         )
-
-        ## promote
-        # returns list[ModelVersion]
-        if models:
-            client.transition_model_version_stage(
-                name=MLFLOW_REGISTERED_MODEL,
-                version=model_vers.version,
-                stage="Production",
-                archive_existing_versions=True,
-            )
-        # ModelVersion of the registered model
-        model_info = {
-            "run_id": model_vers.run_id,
-            "source": model_vers.source,
-        }
     else:
         logger.info(
             f"Previous model (run_id:{run_id}) is still the best performing, no new versions made."

@@ -301,3 +301,7 @@ In addition, set these environment vars via `monkeypatch.setenv`:
 Conversely, test absence of or incorrect env vars with `monkeypatch.delenv`
 
 Initial tests did not successfully set the test environment vars
+
+In my `train` function I've already called the env var and set it to the above constants. Setting new env vars after the fact does not change their value, and it did not affect the original assignment; they still only took from the defaults.
+
+But I need the top global assignment to use my `mlflow.MlflowClient` freely throughout the module.

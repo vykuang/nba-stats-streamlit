@@ -2,6 +2,7 @@
 Unit tests for model.py
 Requires sample API json for testing
 """
+
 import pandas as pd
 import pytest
 
@@ -127,12 +128,17 @@ def test_transform_leaguedash(make_league_df):
     assert (res == test_transform_df).all(axis=None)
 
 
-def test_train_model(test_data_dir, mock_env_mlflow):
+def test_train_model(test_data_dir, mock_env_mlflow, mock_mlflow_client):
     """Tests the model training via local mlflow"""
     season = "test"
     data_path = test_data_dir
     max_evals = 2
     loglevel = "DEBUG"
+    # model.MLFLOW_REGISTRY_URI = os.getenv("MLFLOW_REGISTRY_URI")
+    # model.MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
+    # model.MLFLOW_REGISTERED_MODEL = os.getenv("MLFLOW_REGISTERED_MODEL")
+    # model.MLFLOW_ARTIFACT_PATH = os.getenv("MLFLOW_ARTIFACT_PATH")
+    # model.client = mock_mlflow_client
     res = model.train(
         data_path=data_path, max_evals=max_evals, season=season, loglevel=loglevel
     )
