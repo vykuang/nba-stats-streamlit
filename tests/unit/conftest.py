@@ -31,6 +31,8 @@ def make_feat_df(test_data_dir, load_pickle):
 
     return _make_feat_df
 
+os.environ["MLFLOW_TRACKING_URI"] = f"sqlite:///tests/data/mlflow.db"
+
 
 @pytest.fixture
 def mock_env_mlflow(monkeypatch, tmp_path):

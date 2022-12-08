@@ -302,6 +302,36 @@ Conversely, test absence of or incorrect env vars with `monkeypatch.delenv`
 
 Initial tests did not successfully set the test environment vars
 
-In my `train` function I've already called the env var and set it to the above constants. Setting new env vars after the fact does not change their value, and it did not affect the original assignment; they still only took from the defaults.
+In my `train` function I've already called the env var and set it to the above constants. Setting new env vars after the fact does not change their value, and it did not affect the original assignment; they only took from the defaults because those are determined at *import time*, and I patched the env at *runtime*.
+
+I can try patching the variables, but `mlflow.set...()` would also happen at import time
 
 But I need the top global assignment to use my `mlflow.MlflowClient` freely throughout the module.
+
+Do I need to refactor the code to remove the global scoped variables?
+
+If I can replace `mlflow.start_run()` and other *high level fluent API* I could perhaps pass the client around, and use it as fixture, but the client involves lower level API that just makes everything more convoluted. Most notably it only has `.log_param(run_id, param_name, param_val)`, not `mlflow.log_params(params_dict)`.
+
+General tips from [this succinct SOF post](https://stackoverflow.com/a/73579245/5496416)
+
+> - don't execute `os.getenv()` at import time (i.e. not global)
+> - monkeypatch the `VAR` instead of `"ENV_VAR"`
+> - mock env in `pytest_sessionstart`??? Not easily showing up in searches.
+> - `pytest` executes in the following order: 
+>
+>    1. import `conftest`
+>    1. executes that
+>    1. import tests
+>    1. execute tests
+
+Those env vars are set at import time whereas our monkeypatch fixture is executed after loading the test modules.
+
+[From this discussion chain](https://github.com/pytest-dev/pytest/issues/2229) there seems to be some irreconcilable differences between the pattern of *global variable as central configs* vs pytest philosophy.
+
+A kind of a braindead way is to just run this globally in `conftest`:
+
+```py
+os.environ["MLFLOW_TRACKING_URI"] = f"sqlite:///tests/data/mlflow.db"
+```
+
+But obviously now we don't have access to `tmp_path`
