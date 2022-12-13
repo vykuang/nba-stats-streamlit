@@ -6,7 +6,7 @@ Requires sample API json for testing
 import pandas as pd
 import pytest
 
-from frontend.model import leaguedash_columns, model, foo
+from frontend.model import leaguedash_columns, model
 
 PLAYTIME_TEST_NUM = 20
 
@@ -128,27 +128,14 @@ def test_transform_leaguedash(make_league_df):
     assert (res == test_transform_df).all(axis=None)
 
 
-def test_train_model(test_data_dir, mock_env_mlflow, mock_mlflow_client):
+def test_train_model(test_data_dir, mock_env_mlflow):
     """Tests the model training via local mlflow"""
     season = "test"
     data_path = test_data_dir
     max_evals = 2
     loglevel = "DEBUG"
-    # model.MLFLOW_REGISTRY_URI = os.getenv("MLFLOW_REGISTRY_URI")
-    # model.MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
-    # model.MLFLOW_REGISTERED_MODEL = os.getenv("MLFLOW_REGISTERED_MODEL")
-    # model.MLFLOW_ARTIFACT_PATH = os.getenv("MLFLOW_ARTIFACT_PATH")
-    # model.client = mock_mlflow_client
     res = model.train(
         data_path=data_path, max_evals=max_evals, season=season, loglevel=loglevel
     )
-    print(res)
-    assert False
-
-def test_mock_env(mock_env_mlflow):
-    """Testing how to get pytest to mock environment vars that are taken
-    at module's global scope
-    """
-    foo.print_env_vars()
-    foo.print_inside_envs()
-    assert False
+    assert res["run_id"]
+    assert res["source"]

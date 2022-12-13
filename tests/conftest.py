@@ -4,6 +4,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from frontend.model import model
+
 
 @pytest.fixture
 def test_data_dir() -> Path:
@@ -53,3 +55,22 @@ def make_league_df(test_data_dir, load_pickle):
         return load_pickle(df_path)
 
     return _make_league_df
+
+
+@pytest.fixture
+def mock_env_mlflow(monkeypatch, tmp_path):
+    """Sets MLflow env vars to test state
+
+    By the time this fixture runs, model.py will already have tried to
+    retrieve the environment vars
+    This sets the module constants after the env vars have been retrieved
+    """
+    # need to set a filepath so that model artifact are also saved im tmp_path
+    # instead of local project directory
+    monkeypatch.setattr(model, "MLFLOW_TRACKING_URI", f"{str(tmp_path / 'mlruns')}")
+    monkeypatch.setattr(
+        model, "MLFLOW_REGISTRY_URI", f"sqlite:///{str(tmp_path / 'mlflow.db')}"
+    )
+    monkeypatch.setattr(model, "MLFLOW_EXP_NAME", "pytest")
+    monkeypatch.setattr(model, "MLFLOW_REGISTERED_MODEL", "pytest-clusterer")
+    monkeypatch.setattr(model, "MLFLOW_ARTIFACT_PATH", "pytest-model")

@@ -1,7 +1,4 @@
-import os
-
 import pytest
-from mlflow import MlflowClient
 
 
 @pytest.fixture
@@ -30,28 +27,3 @@ def make_feat_df(test_data_dir, load_pickle):
         return load_pickle(fp)
 
     return _make_feat_df
-
-os.environ["MLFLOW_TRACKING_URI"] = f"sqlite:///tests/data/mlflow.db"
-
-
-@pytest.fixture
-def mock_env_mlflow(monkeypatch, tmp_path):
-    """Sets MLflow env vars to test state"""
-    monkeypatch.setenv(
-        "MLFLOW_TRACKING_URI", f"sqlite:///{str(tmp_path / 'mlflow.db')}"
-    )
-    monkeypatch.setenv(
-        "MLFLOW_REGISTRY_URI", f"sqlite:///{str(tmp_path / 'mlflow.db')}"
-    )
-    monkeypatch.setenv("MLFLOW_EXP_NAME", "pytest")
-    monkeypatch.setenv("MLFLOW_REGISTERED_MODEL", "pytest-clusterer")
-    monkeypatch.setenv("MLFLOW_ARTIFACT_PATH", "pytest-model")
-
-
-@pytest.fixture
-def mock_mlflow_client(mock_env_mlflow):
-    mock_client = MlflowClient(
-        tracking_uri=os.getenv("MLFLOW_TRACKING_URI"),
-        registry_uri=os.getenv("MLFLOW_REGISTRY_URI"),
-    )
-    return mock_client

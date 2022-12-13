@@ -55,9 +55,9 @@ def test_flask_request(client, tmp_path, flask_service, route, query_string):
 
 def test_flask_transform(client, test_data_dir, make_league_df, load_pickle):
     """
-    GIVEN app_model is up, and leaguedash.pkl are in data_path
+    GIVEN app_model is up, and reg/post leaguedash.pkl are in data_path
     WHEN client GETs request to "transform"
-    THEN app_model transforms the .pkl to modelling-grade input
+    THEN app_model transforms the .pkl to modeling-grade input
     """
 
     query_string = {
@@ -77,3 +77,24 @@ def test_flask_transform(client, test_data_dir, make_league_df, load_pickle):
     assert (test_transform_df == res_transform_df).all(axis=None)
     # removes the resulting merge.pkl
     res_fp.unlink()
+
+
+def test_flask_model(client, test_data_dir, mock_env_mlflow):
+    """
+    GIVEN app_model is up, and leaguedash_merge.pkl is in data_path
+    WHEN client GETs request to "model"
+    THEN app_model trains a clusterer using the _merge.pkl, logs model
+        artifact, registers the model, and returns nominal status code
+    """
+    query_string = {
+        "data_path": str(test_data_dir),
+        "season": "test",
+        "max_evals": 2,
+        "loglevel": "debug",
+    }
+
+    response = client("model").get(
+        "/model",
+        query_string=query_string,
+    )
+    assert response.status_code == 200

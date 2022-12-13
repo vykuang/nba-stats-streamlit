@@ -315,14 +315,17 @@ If I can replace `mlflow.start_run()` and other *high level fluent API* I could 
 General tips from [this succinct SOF post](https://stackoverflow.com/a/73579245/5496416)
 
 > - don't execute `os.getenv()` at import time (i.e. not global)
-> - monkeypatch the `VAR` instead of `"ENV_VAR"`
-> - mock env in `pytest_sessionstart`??? Not easily showing up in searches.
-> - `pytest` executes in the following order: 
 >
->    1. import `conftest`
->    1. executes that
->    1. import tests
->    1. execute tests
+> - monkeypatch the `VAR` instead of `"ENV_VAR"`
+>
+> - mock env in `pytest_sessionstart`??? Not easily showing up in searches.
+>
+> - `pytest` executes in the following order:
+>
+>   1. import `conftest`
+>   1. executes that
+>   1. import tests
+>   1. execute tests
 
 Those env vars are set at import time whereas our monkeypatch fixture is executed after loading the test modules.
 
@@ -335,3 +338,9 @@ os.environ["MLFLOW_TRACKING_URI"] = f"sqlite:///tests/data/mlflow.db"
 ```
 
 But obviously now we don't have access to `tmp_path`
+
+Perhaps refactor my code to avoid those global configs.
+
+- set `mlflow.set_...` inside `model()`
+- set `MlflowClient(...)` inside `find` and `register`
+- in my pytest.fixture, use `monkeypatch.setattr(model, "VAR_NAME", value)`, where `model` is from `from frontend.model import model`

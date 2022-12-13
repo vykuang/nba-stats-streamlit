@@ -25,15 +25,12 @@ from sklearn.preprocessing import StandardScaler
 
 from . import leaguedash_columns
 
-MLFLOW_REGISTRY_URI = os.getenv("MLFLOW_REGISTRY_URI", "sqlite:///mlflow.db")
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "sqlite:///mlflow.db")
+MLFLOW_REGISTRY_URI = os.getenv("MLFLOW_REGISTRY_URI", MLFLOW_TRACKING_URI)
 MLFLOW_EXP_NAME = os.getenv("MLFLOW_EXP_NAME", "nba-leaguedash-cluster")
 MLFLOW_REGISTERED_MODEL = os.getenv("MLFLOW_REGISTERED_MODEL", "nba-player-clusterer")
 MLFLOW_ARTIFACT_PATH = os.getenv("MLFLOW_ARTIFACT_PATH", "sk_model")
 
-mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-mlflow.set_experiment(MLFLOW_EXP_NAME)
-client = MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
 
 app_model = Flask(__name__)
 
@@ -356,6 +353,9 @@ def model_search(data: pd.DataFrame, num_trials: int = 10) -> Trials:
     https://docs.databricks.com/applications/machine-learning/automl-hyperparam-tuning/hyperopt-model-selection.html
 
     """
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    mlflow.set_registry_uri(MLFLOW_REGISTRY_URI)
+    mlflow.set_experiment(MLFLOW_EXP_NAME)
 
     def objective(params):
         """Used in conjunction with hyperopt.fmin"""
@@ -459,6 +459,17 @@ def find_best_model() -> str:
         str
         Corresponds to the run_id of the best performing model
     """
+    client = MlflowClient(
+        tracking_uri=MLFLOW_TRACKING_URI, registry_uri=MLFLOW_REGISTRY_URI
+    )
+
+    logger.info(
+        f"""
+    find_best_model - Mlflow tracking URI: {MLFLOW_TRACKING_URI}
+    find_best_model - Mlflow registry URI: {MLFLOW_REGISTRY_URI}
+    """
+    )
+
     exp = client.get_experiment_by_name(MLFLOW_EXP_NAME)
     query = "metrics.n_labels >= 3"
     best_runs = client.search_runs(
@@ -478,7 +489,17 @@ def register_model(run_id: str) -> dict:
     """
     Register the model and promote to production stage
     """
-    logger.info(f"register_model - Mlflow tracking URI: {MLFLOW_TRACKING_URI}")
+    client = MlflowClient(
+        tracking_uri=MLFLOW_TRACKING_URI, registry_uri=MLFLOW_REGISTRY_URI
+    )
+
+    logger.info(
+        f"""
+    register_model - Mlflow tracking URI: {MLFLOW_TRACKING_URI}
+    register_model - Mlflow registry URI: {MLFLOW_REGISTRY_URI}
+    """
+    )
+
     run_id_prev = None
     # note the single quote around the search value
     models = client.search_model_versions(f"name='{MLFLOW_REGISTERED_MODEL}'")
