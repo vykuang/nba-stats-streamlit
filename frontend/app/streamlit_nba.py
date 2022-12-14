@@ -13,6 +13,7 @@ import altair as alt
 import mlflow
 import numpy as np
 import pandas as pd
+import requests
 from mlflow.tracking import MlflowClient
 
 import streamlit as st
@@ -57,10 +58,6 @@ MLFLOW_EXP_NAME = os.getenv("MLFLOW_EXP_NAME", "nba-leaguedash-cluster")
 MLFLOW_REGISTERED_MODEL = os.getenv("MLFLOW_REGISTERED_MODEL", "nba-player-clusterer")
 
 
-mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-mlflow.set_experiment(MLFLOW_EXP_NAME)
-client = MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
-
 alt.data_transformers.enable("json")
 
 st.title("NBA Player Comparisons across Eras")
@@ -84,8 +81,47 @@ season_b_input = st.selectbox(
 # ----------------------------------------------------------------------------
 
 
+def fetch_stats(season: str, data_path: str) -> int:
+    """Requests the absent season stats from the "fetch" microservice container
+
+    Returns
+    --------
+    status_code: int
+        200 for nominal response
+        500 for exception
+    """
+    # magic variable; need to parametrize the host, port, and route???
+    fetch_url = "fetch:8080/fetch"
+    query_string = {
+        "season": season,
+        "data_path": data_path,
+    }
+    response = requests.get(fetch_url, params=query_string)
+    return response.status_code
+
+
+def transform_stats(season: str, data_path: str) -> int:
+    """Requests transformation from "model" microservice container via the
+    "/transform" route
+
+    BASICALLY THE SAME FUNC AS FETCH_STATS - REFACTOR!!!
+
+    Returns
+    ---------
+    status_code: int
+    """
+    # magic variable
+    transform_url = "model:8081/transform"
+    query_string = {
+        "season": season,
+        "data_path": data_path,
+    }
+    response = requests.get(transform_url, params=query_string)
+    return response.status_code
+
+
 # @st.cache
-def load_career_stats(season: str, data_path: Path = "../../data/"):
+def load_career_stats(season: str, data_path: str = "../../data/"):
     file_path = Path(data_path) / f"leaguedash_merge_{season}.pkl"
     data = pd.read_pickle(file_path)
     return data
@@ -108,6 +144,7 @@ def retrieve(model_name: str) -> mlflow.pyfunc.PyFuncModel:
     """
     Retrieves and returns the latest version of the registered model
     """
+    client = MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
     # needs additional quotation marks around the filter value
     model_filter = f"name='{model_name}'"
     mv_search = client.search_model_versions(model_filter)

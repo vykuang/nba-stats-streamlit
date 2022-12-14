@@ -413,6 +413,9 @@ Some disable `venv` in docker as the container is its own isolated environment, 
   - fetch
   - transform
   - model
+  - test against docker containers of the flask app
+    - Not much luck looking for third-party libraries (that is immediately obvious) that are straightforward to setup test containers for pytest
+    - Looking to setup `pytest.fixture` that starts up the microservice containers for me to make the flask requests against
 - Docker image for streamlit that does what we scoped in the above test
 
 ## Tips and tricks
