@@ -1,3 +1,7 @@
+"""
+leaguedash retrieves the season's cumulative stat for all players
+serves as the historical data used to train our model
+"""
 import argparse
 import json
 import logging
@@ -45,15 +49,6 @@ def get_leaguedash_json(
     )
     res = league_dash.get_normalized_json()
     return json.loads(res)["LeagueDashPlayerStats"]
-
-
-# def weighted_stats(regular: dict, playoffs: dict, post_wt: float = 2.0) -> dict:
-#     """Merge stats proportionally via games played
-
-#     Parameters
-#     ----------
-#     regular: dict
-#         """
 
 
 def dump_pickle(obj, fp: Path) -> None:
@@ -104,7 +99,7 @@ def fetch_league_dash(
         logger.debug(f"Waiting for {wait_time} seconds")
         time.sleep(wait_time)
     else:
-        logger.info(f"{reg_path.name} already exits; API not called")
+        logger.info(f"{reg_path.name} already exists; API not called")
 
     if not playoffs_path.exists():
         logger.info(f"Retrieving playoff dashboard for {season}")
@@ -113,7 +108,7 @@ def fetch_league_dash(
         logger.info(f"Saving playoffs results to:\n{playoffs_path.resolve()}")
         dump_pickle(playoffs, playoffs_path)
     else:
-        logger.info(f"{playoffs_path.name} already exits; API not called")
+        logger.info(f"{playoffs_path.name} already exists; API not called")
 
 
 def main(season, data_path, loglevel):

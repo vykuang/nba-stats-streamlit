@@ -23,9 +23,10 @@ A basic end-to-end deployment of a simple model using data from NBA stats.
 ## Architecture
 
 - sklearn trains our model
-- mlflow tracks experiments
+- mlflow tracks experiments (docker)
+- minio for S3 compatible object storage (docker)
 - hyperopt for model tuning
-- Flask acts as basic backend (could sub gunicorn if things get serious)
+- Flask to expose model endpoint
 - Streamlit as frontend
 - ~~poetry~~ uv manages dependencies
 - github actions for CI/CD
@@ -68,3 +69,12 @@ Streamlit will require:
 The stat ranks will play a large part in determining the similarity, but only after the label is revealed by the model. After that we could feature-engineer some kind of aggregate ranking to be applied intra-label, and then pick players from the comparison season adjacent to the selected player's rank in the current season
 
 `PLUS_MINUS_RANK` and `MIN_RANK` to be used for aggregate ranking, emphasizing player impact and in-game time.
+
+## running
+
+1. `fetch.py` retrieves `leaguedash` data from NBA API and stores in parquet
+    - minIO/S3 for object storage?
+1. `feature.py` processes and transforms for feature engineering, storing in feature store (parquet)
+1. `train.py` searches and selects the best unsupervised model, then saves to registry
+1. `deploy.py` spins up flask to expose model endpoint
+1. `streamlit.py` acts as frontend 
