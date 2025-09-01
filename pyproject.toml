@@ -1,73 +1,22 @@
 [project]
-name = "vk-streamlit-demo"
+name = "nba-stats-streamlit"
 version = "0.1.0"
-authors = [
-  { name="Victor", email="vykuang92@gmail.com" },
-]
-description = "Streamlit demo for a basic ML model trained on NBA career stats"
+description = "Add your description here"
 readme = "README.md"
-license = { file="LICENSE" }
-requires-python = ">=3.9.8"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+requires-python = ">=3.11"
+dependencies = [
+    "scikit-learn",
+    "mlflow>2.0,<3.0",
+    "Flask",
+    "streamlit",
+    "nba-api",
+    "tqdm",
+    "hyperopt",
 ]
 
-[project.urls]
-"Homepage" = "https://github.com/vykuang/nba-stats-streamlit"
-"Bug Tracker" =  "https://github.com/vykuang/nba-stats-streamlit/issues"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[metadata]
-name = "vk-streamlit-demo"
-
-[tool.poetry]
-name = "frontend"
-version = "0.1.0"
-description = ""
-authors = ["vykuang <vykuang92@gmail.com>"]
-readme = "README.md"
-
-[tool.poetry.dependencies]
-python = "^3.9.8"
-scikit-learn = "~1.1.0"
-mlflow = "~1.28.0"
-Flask = "^2.2.2"
-streamlit = "^1.12.2"
-nba-api = "^1.1.11"
-tqdm = "^4.64.1"
-hyperopt = "^0.2.7"
-
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.1.3"
-matplotlib = "^3.6.0"
-ipykernel = "^6.15.3"
-pylint = "^2.15.2"
-isort = "^5.10.1"
-black = "^22.8.0"
-pre-commit = "^2.20.0"
-pymarkdownlnt = ">=0.9.4"
-mdformat-gfm = "^0.3.5"
-
-[tool.pylint.messages_control]
-
-max-line-length = 80
-
-disable = [
-  "missing-docstring",
-  "unused-argument",
-  "no-value-for-parameter",
-  "no-member",
-  "no-else-return",
-  "line-too-long",
-  "invalid-sequence-index",
-  "logging-fstring-interpolation",
-  "invalid-name",
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "matplotlib",
+    "ipykernel",
 ]
-
-[tool.pytest.ini_options]
