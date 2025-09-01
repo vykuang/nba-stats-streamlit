@@ -24,9 +24,13 @@ A basic end-to-end deployment of a simple model using data from NBA stats.
 
 - sklearn trains our model
 - mlflow tracks experiments
+- hyperopt for model tuning
 - Flask acts as basic backend (could sub gunicorn if things get serious)
 - Streamlit as frontend
-- poetry manages dependencies
+- ~~poetry~~ uv manages dependencies
+- github actions for CI/CD
+- airflow for orchestration
+    - trigger re-training based on data drift/feature drift
 
 ## What will streamlit do?
 
@@ -53,7 +57,7 @@ Streamlit will act is the frontend interface that the end-user interacts with.
 
 Streamlit will require:
 
-- Trained model, perhaps in `pickle` form
+- Trained model retrieved from mlflow registry
 - `leaguedash` data for all the seasons
   - Do we pre-download everything first? Have that be part of the initialization?
   - Doesn't make much sense to request it ad-hoc for every request
