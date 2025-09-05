@@ -164,7 +164,7 @@ if __name__ == "__main__":
         "--data_path",
         "-p",
         type=Path,
-        default="../data",
+        default="s3://data/raw",
     )
     parser.add_argument(
         "--loglevel",
@@ -174,7 +174,4 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-
-    if not args.data_path.exists():
-        args.data_path.mkdir(parents=True, exist_ok=False)
     main(args.season, args.data_path, args.loglevel)

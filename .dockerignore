@@ -1,0 +1,10 @@
+.venv
+.pg_data
+.minio
+mlruns
+data
+docs
+frontend
+models
+notebooks
+tests
